@@ -1,0 +1,53 @@
+{
+    "variables_in_use": [
+        "{Configuration}",
+        "{Platform}",
+        "{ProjectName}",
+        "{ProjectDir}",
+        "{SolutionDir}",
+        "{OutDir}",
+        "{MonacoBinDir}"
+    ],
+    "jobs": [
+        {
+            "todo": "hardlink",
+            "src": "{ProjectDir}/assets/setup.txt",
+            "dst": "{OutDir}/setup.txt"
+        },
+        {
+            "todo": "hardlink",
+            "src": "{ProjectDir}/assets/class2/facade/BuffaloChiefNYL.db",
+            "dst": "{OutDir}/BuffaloChiefNYL.db"
+        },
+        {
+            "todo": "hardlink",
+            "src": "{ProjectDir}/assets/class2/paytables",
+            "dst": "{OutDir}/paytables"
+        },
+        {
+            "todo": "hardlink",
+            "src": "{OutDir}",
+            "dst": "{MonacoBinDir}/{Configuration}/Games/{ProjectName}/bin"
+        },
+        {
+            "todo": "hardlink",
+            "src": "{OutDir}/../../../../Tools/GDKRuntimeHost/{Platform}/{Configuration}",
+            "dst": "{MonacoBinDir}/{Configuration}/Runtime/bin"
+        },
+        {
+            "todo": "hardlink",
+            "src": "{ProjectDir}/host.cmdline",
+            "dst": "{MonacoBinDir}/{Configuration}/Runtime/bin/host.cmdline"
+        },
+        {
+            "todo": "hardlink",
+            "src": "{ProjectDir}/assets/vlt_lobby",
+            "dst": "{MonacoBinDir}/{Configuration}/Games/{ProjectName}"
+        },
+        {
+            "todo": "copy",
+            "src": "",
+            "dst": ""
+        }
+    ]
+}

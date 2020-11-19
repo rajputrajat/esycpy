@@ -39,7 +39,7 @@ fn map_args(json_data: &AssetRelocationDef, args: &Vec<&str>) -> HashMap<String,
 
 fn main() {
     //"asset_relocation_def.json"
-    let args: Vec<_> = env::args().into_iter().collect();
+    let args: Vec<_> = env::args().skip(1).collect();
 }
 
 #[cfg(test)]

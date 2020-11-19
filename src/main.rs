@@ -47,8 +47,19 @@ mod tests {
         let value = parse_json();
         let value_iter = value.variables_in_use.iter();
         assert_eq!(
+            *value_iter.peekable().peek().unwrap(),
+            &String::from("{Configuration}")
+        );
+        let value_iter = value.variables_in_use.iter();
+        assert_eq!(
             *value_iter.rev().peekable().peek().unwrap(),
             &String::from("{MonacoBinDir}")
         );
+        let value_iter = value.jobs.iter();
+        assert_eq!(
+            &value.jobs[6].dst,
+            "{MonacoBinDir}/{Configuration}/Games/{ProjectName}"
+        );
+        assert_eq!(&value.jobs[5].src, "{ProjectDir}/host.cmdline");
     }
 }

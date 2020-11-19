@@ -65,13 +65,13 @@ impl FileHandlers {
 fn do_jobs(json_data: &AssetRelocationDef, args_map: &HashMap<String, String>) {
     for job in &json_data.jobs {
         let file_handlers = FileHandlers::new();
-        let _ = do_job(job, file_handlers, args_map);
+        let _ = do_job(job, &file_handlers, args_map);
     }
 }
 
 fn do_job(
     job: &JobConfigs,
-    file_handlers: FileHandlers,
+    file_handlers: &FileHandlers,
     args_map: &HashMap<String, String>,
 ) -> Option<String> {
     let mut src = job.src.clone();
@@ -150,7 +150,19 @@ mod tests {
         };
         assert_eq!(
             "hardlink, four/assets/setup.txt, six/setup.txt",
-            do_job(&json_data.jobs[0], fn_handlers, &args_map).unwrap()
+            do_job(&json_data.jobs[0], &fn_handlers, &args_map).unwrap()
+        );
+        assert_eq!(
+            concat!(
+                "hardlink, ",
+                "six/../../../../Tools/GDKRuntimeHost/two/one, ",
+                "seven/one/Runtime/bin"
+            ),
+            do_job(&json_data.jobs[4], &fn_handlers, &args_map).unwrap()
+        );
+        assert_eq!(
+            "copy, , ",
+            do_job(&json_data.jobs[7], &fn_handlers, &args_map).unwrap()
         );
     }
 }

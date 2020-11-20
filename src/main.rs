@@ -1,5 +1,6 @@
 use log::{debug, error};
 use serde::Deserialize;
+use simplelog::*;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
@@ -28,7 +29,8 @@ fn parse_json(path: &Path) -> AssetRelocationDef {
     json_data
 }
 
-fn map_args(json_data: &AssetRelocationDef, args: &Vec<&str>) -> HashMap<String, String> {
+fn map_args(json_data: &AssetRelocationDef, args: String) -> HashMap<String, String> {
+    let args: Vec<String> = args.split(", ").map(|x| String::from(x)).collect();
     assert_eq!(
         json_data.variables_in_use.len(),
         args.len(),
@@ -36,7 +38,7 @@ fn map_args(json_data: &AssetRelocationDef, args: &Vec<&str>) -> HashMap<String,
     );
     let mut args_map: HashMap<String, String> = HashMap::new();
     for (i, val) in json_data.variables_in_use.iter().enumerate() {
-        args_map.insert(String::from(val), String::from(args[i]));
+        args_map.insert(String::from(val), String::from(&args[i]));
     }
     debug!("args: {:?}", args_map);
     args_map
@@ -90,6 +92,10 @@ fn do_job(
         src = src.replace(arg, val.as_str());
         dst = dst.replace(arg, val);
     }
+    let dst_path: &Path = Path::new(dst.as_str());
+    if dst_path.exists() {
+        fs::remove_file(dst_path).expect("error in file deletion");
+    }
     match job.todo.as_str() {
         "hardlink" => (file_handlers.hardlink)(src.as_str(), dst.as_str()),
         "copy" => (file_handlers.cpy)(src.as_str(), dst.as_str()),
@@ -98,9 +104,27 @@ fn do_job(
     }
 }
 
+fn setup_logger() {
+    CombinedLogger::init(vec![
+        TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed),
+        WriteLogger::new(
+            LevelFilter::Trace,
+            Config::default(),
+            fs::File::create("asset_maker.log").unwrap(),
+        ),
+    ])
+    .unwrap();
+}
+
 fn main() {
     //"asset_relocation_def.json"
-    let args: Vec<_> = env::args().skip(1).collect();
+    setup_logger();
+    let json_data = parse_json(Path::new("asset_relocation_def.json"));
+    let args = env::args().skip(1).next().unwrap();
+    debug!("args: {:?}", args);
+    let args_map = map_args(&json_data, args);
+    do_jobs(&json_data, &args_map);
+    debug!("all done");
 }
 
 #[cfg(test)]
@@ -128,9 +152,9 @@ mod tests {
 
     #[test]
     fn check_args_map_good() {
-        let args = vec!["one", "two", "three", "four", "five", "six", "seven"];
+        let args = "one, two, three, four, five, six, seven";
         let json_data = parse_json(Path::new("asset_relocation_def.json"));
-        let args_map = map_args(&json_data, &args);
+        let args_map = map_args(&json_data, String::from(args));
         assert_eq!(args_map["{Configuration}"], "one");
         assert_eq!(args_map["{MonacoBinDir}"], "seven");
         assert_eq!(args_map["{ProjectDir}"], "four");
@@ -138,9 +162,9 @@ mod tests {
 
     #[test]
     fn which_operation() {
-        let args = vec!["one", "two", "three", "four", "five", "six", "seven"];
+        let args = "one, two, three, four, five, six, seven";
         let json_data = parse_json(Path::new("asset_relocation_def.json"));
-        let args_map = map_args(&json_data, &args);
+        let args_map = map_args(&json_data, String::from(args));
         let fn_handlers = FileHandlers {
             hardlink: |s, d| {
                 let mut buf = String::new();

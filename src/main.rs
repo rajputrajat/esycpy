@@ -1,8 +1,10 @@
+use log::{debug, error};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
 use std::fs;
+use std::path::Path;
 
 #[derive(Deserialize)]
 struct AssetRelocationDef {
@@ -10,17 +12,19 @@ struct AssetRelocationDef {
     jobs: Vec<JobConfigs>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct JobConfigs {
     todo: String,
     src: String,
     dst: String,
 }
 
-fn parse_json(path: &str) -> AssetRelocationDef {
+fn parse_json(path: &Path) -> AssetRelocationDef {
     let json_text = fs::read_to_string(path).expect("couldn't read file");
+    debug!("{} file is read", path.to_str().unwrap());
     let json_data: AssetRelocationDef =
         serde_json::from_str(&json_text).expect("json file format doesn't comply");
+    debug!("json file is parsed");
     json_data
 }
 
@@ -34,6 +38,7 @@ fn map_args(json_data: &AssetRelocationDef, args: &Vec<&str>) -> HashMap<String,
     for (i, val) in json_data.variables_in_use.iter().enumerate() {
         args_map.insert(String::from(val), String::from(args[i]));
     }
+    debug!("args: {:?}", args_map);
     args_map
 }
 
@@ -45,17 +50,21 @@ struct FileHandlers {
 
 impl FileHandlers {
     fn new() -> Self {
+        debug!("preparing file handlers");
         FileHandlers {
             hardlink: |s, d| {
-                fs::hard_link(s, d).unwrap();
+                debug!("creating hardlink from '{}' to '{}'", s, d);
+                fs::hard_link(s, d).expect("couldn't create hardlink");
                 None
             },
             cpy: |s, d| {
-                let _ = fs::copy(s, d).unwrap();
+                debug!("copying from '{}' to '{}'", s, d);
+                let _ = fs::copy(s, d).expect("problem while copying");
                 None
             },
             mov: |s, d| {
-                fs::rename(s, d).unwrap();
+                debug!("moving from '{}' to '{}'", s, d);
+                fs::rename(s, d).expect("move operation failed");
                 None
             },
         }
@@ -74,6 +83,7 @@ fn do_job(
     file_handlers: &FileHandlers,
     args_map: &HashMap<String, String>,
 ) -> Option<String> {
+    debug!("current job is: {:?}", job);
     let mut src = job.src.clone();
     let mut dst = job.dst.clone();
     for (arg, val) in args_map {
@@ -98,7 +108,7 @@ mod tests {
     use super::*;
     #[test]
     fn json_parsing() {
-        let value = parse_json("asset_relocation_def.json");
+        let value = parse_json(Path::new("asset_relocation_def.json"));
         let value_iter = value.variables_in_use.iter();
         assert_eq!(
             *value_iter.peekable().peek().unwrap(),
@@ -119,7 +129,7 @@ mod tests {
     #[test]
     fn check_args_map_good() {
         let args = vec!["one", "two", "three", "four", "five", "six", "seven"];
-        let json_data = parse_json("asset_relocation_def.json");
+        let json_data = parse_json(Path::new("asset_relocation_def.json"));
         let args_map = map_args(&json_data, &args);
         assert_eq!(args_map["{Configuration}"], "one");
         assert_eq!(args_map["{MonacoBinDir}"], "seven");
@@ -129,7 +139,7 @@ mod tests {
     #[test]
     fn which_operation() {
         let args = vec!["one", "two", "three", "four", "five", "six", "seven"];
-        let json_data = parse_json("asset_relocation_def.json");
+        let json_data = parse_json(Path::new("asset_relocation_def.json"));
         let args_map = map_args(&json_data, &args);
         let fn_handlers = FileHandlers {
             hardlink: |s, d| {

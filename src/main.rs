@@ -148,12 +148,14 @@ fn do_job(src: &str, dst: &str, todo: &str) {
 
 fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
     let mut paths: Vec<AssetPaths> = Vec::new();
-    let src = src.trim_end_matches("\\").trim_end_matches("/");
+    let mut src = src.trim_end_matches("\\").trim_end_matches("/");
     let re = Regex::new(r".+\\+\*\.([[:alnum:]]+)").unwrap();
     let mut filter = String::new();
     if let Some(captures) = re.captures(src) {
         if captures.len() == 2 {
             filter = captures[1].to_owned();
+            let last_bslash = src.rfind("\\").unwrap();
+            src = &src[..last_bslash];
         }
     }
     for item in WalkDir::new(Path::new(src)) {
@@ -265,5 +267,12 @@ mod tests {
         let m = re.captures("c:\\yo\\man\\*.mercury").unwrap();
         assert_eq!("mercury", &m[1]);
         assert_eq!(m.len(), 2);
+    }
+
+    #[test]
+    fn test_sting_find() {
+        let test_str = "c:\\hello\\there\\*.xml";
+        let ind = test_str.rfind("\\").unwrap();
+        assert_eq!("c:\\hello\\there", &test_str[..ind]);
     }
 }

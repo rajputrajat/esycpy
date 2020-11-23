@@ -1,5 +1,6 @@
 use log::debug;
 use log_panics;
+use regex::Regex;
 use serde::Deserialize;
 use simplelog::*;
 use std::collections::HashMap;
@@ -147,9 +148,32 @@ fn do_job(src: &str, dst: &str, todo: &str) {
 
 fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
     let mut paths: Vec<AssetPaths> = Vec::new();
+    let src = src.trim_end_matches("\\").trim_end_matches("/");
+    let re = Regex::new(r".+\\+\*\.([[:alnum:]]+)").unwrap();
+    let mut filter = String::new();
+    if let Some(captures) = re.captures(src) {
+        if captures.len() == 2 {
+            filter = captures[1].to_owned();
+        }
+    }
     for item in WalkDir::new(Path::new(src)) {
         let item = item.unwrap();
         let src_path = &item.path();
+        if src_path.is_file() {
+            if !filter.is_empty() {
+                let file_extn = item.path().extension();
+                match file_extn {
+                    Some(v) => {
+                        if v.to_str().unwrap().to_owned() == filter {
+                            debug!("ext found: {:?}", src_path);
+                        } else {
+                            continue;
+                        }
+                    }
+                    None => continue,
+                }
+            }
+        }
         let src_str = src_path.to_str().unwrap();
         let src_delta = &src_str[src.len()..];
         let dst_str = dst.to_owned() + src_delta;
@@ -226,5 +250,20 @@ mod tests {
             "c:\\abc\\der\\mea\\fal",
             fix_windows_path(String::from("c:\\/abc/der//mea\\fal")).as_str()
         );
+    }
+
+    #[test]
+    fn test_regex() {
+        let re = Regex::new(r"\*(\.[[:alnum:]]+)").unwrap();
+        let m = re.captures("*.mercury").unwrap();
+        assert_eq!(".mercury", &m[1]);
+        let re = Regex::new(r".+\\+\*(\.[[:alnum:]]+)").unwrap();
+        let m = re.captures("c:\\yo\\man\\*.mercury").unwrap();
+        assert_eq!(".mercury", &m[1]);
+        assert_eq!(m.len(), 2);
+        let re = Regex::new(r".+\\+\*\.([[:alnum:]]+)").unwrap();
+        let m = re.captures("c:\\yo\\man\\*.mercury").unwrap();
+        assert_eq!("mercury", &m[1]);
+        assert_eq!(m.len(), 2);
     }
 }

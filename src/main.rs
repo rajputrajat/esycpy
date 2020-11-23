@@ -123,8 +123,14 @@ fn get_paths_after_replacing_args(
 fn do_jobs(json_data: &AssetRelocationDef, args_map: &HashMap<String, String>) {
     for job in &json_data.jobs {
         let (src, dst) = get_paths_after_replacing_args(job, args_map);
+        let src = fix_windows_path(src);
+        let dst = fix_windows_path(dst);
         do_job(src.as_str(), dst.as_str(), job.todo.as_str());
     }
+}
+
+fn fix_windows_path(path: String) -> String {
+    path.replace("\\", "/").replace("//", "/")
 }
 
 fn do_job(src: &str, dst: &str, todo: &str) {
@@ -211,5 +217,13 @@ mod tests {
         assert_eq!(args_map["{Configuration}"], "one");
         assert_eq!(args_map["{MonacoBinDir}"], "seven");
         assert_eq!(args_map["{ProjectDir}"], "four");
+    }
+
+    #[test]
+    fn weird_paths() {
+        assert_eq!(
+            "c:/abc/der/mea/fal",
+            fix_windows_path(String::from("c:\\/abc/der//mea\\fal")).as_str()
+        );
     }
 }

@@ -5,6 +5,7 @@ name = "asset_maker"
 version = "0.1.0"
 dependencies = [
  "log",
+ "log-panics",
  "serde",
  "serde_json",
  "simplelog",
@@ -55,6 +56,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "log-panics"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae0136257df209261daa18d6c16394757c63e032e27aafd8b07788b051082bef"
+dependencies = [
+ "log",
 ]
 
 [[package]]

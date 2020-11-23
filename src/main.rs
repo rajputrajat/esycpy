@@ -1,4 +1,5 @@
-use log::debug;
+use log::{debug, warn};
+use log_panics;
 use serde::Deserialize;
 use simplelog::*;
 use std::collections::HashMap;
@@ -71,6 +72,7 @@ struct AssetPaths {
 impl FileOperations for AssetPaths {
     fn recurse(&self, cb: fn(&Self) -> Option<String>) -> Option<String> {
         for item in WalkDir::new(&self.src) {
+            debug!("current item, src: \'{:?}\'", item);
             let item = item.unwrap();
             let src_path = &item.path();
             let src_str = src_path.to_str().unwrap();
@@ -78,8 +80,10 @@ impl FileOperations for AssetPaths {
             let dst_str = self.dst.to_str().unwrap().to_owned() + src_delta;
             let dst_path = Path::new(&dst_str);
             if src_path.is_dir() {
+                debug!("\'{:?}\' is a dir, so create it", src_path);
                 self.create_dir(dst_path)?;
             } else {
+                self.remove_dst();
                 cb(&self)?;
             }
         }
@@ -88,7 +92,7 @@ impl FileOperations for AssetPaths {
     fn create_dir(&self, d: &Path) -> Option<String> {
         if !d.exists() {
             debug!("creating dir: {:?}", d);
-            fs::create_dir(d).expect("couldn't create dir");
+            fs::create_dir_all(d).expect("couldn't create dir");
         }
         None
     }
@@ -146,7 +150,11 @@ fn do_jobs(json_data: &AssetRelocationDef, args_map: &HashMap<String, String>) {
 
 fn do_job(job: &JobConfigs, asset_paths: &impl FileOperations) -> Option<String> {
     debug!("current job is: {:?}", job);
-    asset_paths.remove_dst();
+    //asset_paths.remove_dst();
+    if job.src.as_str() == "" && job.dst.as_str() == "" {
+        warn!("paths shouldn't be empty. ignoring for now");
+        return None;
+    }
     match job.todo.as_str() {
         "hardlink" => asset_paths.recurse(FileOperations::create_hardlink),
         "copy" => asset_paths.recurse(FileOperations::create_copy),
@@ -169,6 +177,7 @@ fn setup_logger() {
 
 fn main() {
     setup_logger();
+    log_panics::init();
     let json_data = parse_json(Path::new("asset_relocation_def.json"));
     let args = env::args().skip(1).next().unwrap();
     debug!("args: {:?}", args);

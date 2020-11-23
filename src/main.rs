@@ -122,7 +122,8 @@ fn get_paths_after_replacing_args(
 
 fn do_jobs(json_data: &AssetRelocationDef, args_map: &HashMap<String, String>) {
     for job in &json_data.jobs {
-        let (src, dst) = get_paths_after_replacing_args(job, args_map);
+        let (src, mut dst) = get_paths_after_replacing_args(job, args_map);
+        dst.push('\\');
         let src = fix_windows_path(src);
         let dst = fix_windows_path(dst);
         do_job(src.as_str(), dst.as_str(), job.todo.as_str());
@@ -130,7 +131,7 @@ fn do_jobs(json_data: &AssetRelocationDef, args_map: &HashMap<String, String>) {
 }
 
 fn fix_windows_path(path: String) -> String {
-    path.replace("\\", "/").replace("//", "/")
+    path.replace("/", "\\").replace("\\\\", "\\")
 }
 
 fn do_job(src: &str, dst: &str, todo: &str) {
@@ -147,12 +148,12 @@ fn do_job(src: &str, dst: &str, todo: &str) {
 fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
     let mut paths: Vec<AssetPaths> = Vec::new();
     for item in WalkDir::new(Path::new(src)) {
-        debug!("current item, src: \'{:?}\'", item);
         let item = item.unwrap();
         let src_path = &item.path();
         let src_str = src_path.to_str().unwrap();
         let src_delta = &src_str[src.len()..];
         let dst_str = dst.to_owned() + src_delta;
+        let dst_str = dst_str.trim_end_matches("\\");
         let dst_path = Path::new(&dst_str);
         let apath = AssetPaths {
             src: src_path.to_path_buf(),
@@ -222,7 +223,7 @@ mod tests {
     #[test]
     fn weird_paths() {
         assert_eq!(
-            "c:/abc/der/mea/fal",
+            "c:\\abc\\der\\mea\\fal",
             fix_windows_path(String::from("c:\\/abc/der//mea\\fal")).as_str()
         );
     }

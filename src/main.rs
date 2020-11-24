@@ -158,34 +158,49 @@ fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
             src = &src[..last_bslash];
         }
     }
-    for item in WalkDir::new(Path::new(src)) {
-        let item = item.unwrap();
-        let src_path = &item.path();
-        if src_path.is_file() {
-            if !filter.is_empty() {
-                let file_extn = item.path().extension();
-                match file_extn {
-                    Some(v) => {
+    fn append_path(src: &str, dst: &str) -> String {
+        let src_delta = &src[src.len()..];
+        let dst_str = dst.to_owned() + src_delta;
+        dst_str.trim_end_matches("\\").to_owned()
+    }
+    if !filter.is_empty() {
+        for item in WalkDir::new(Path::new(src))
+            .max_depth(1)
+            .into_iter()
+            .filter_entry(|x| {
+                if x.path().is_file() {
+                    let file_extn = x.path().extension();
+                    if let Some(v) = file_extn {
                         if v.to_str().unwrap().to_owned() == filter {
-                            debug!("ext found: {:?}", src_path);
-                        } else {
-                            continue;
+                            debug!("ext found: {:?}", x);
+                            return true;
                         }
                     }
-                    None => continue,
                 }
-            }
+                false
+            })
+        {
+            debug!("src path after filter: {:?}", item);
+            let item = item.unwrap();
+            let src_path = item.path();
+            let new_dst = append_path(src_path.to_str().unwrap(), dst);
+            let apath = AssetPaths {
+                src: src_path.to_path_buf(),
+                dst: PathBuf::from(new_dst),
+            };
+            paths.push(apath);
         }
-        let src_str = src_path.to_str().unwrap();
-        let src_delta = &src_str[src.len()..];
-        let dst_str = dst.to_owned() + src_delta;
-        let dst_str = dst_str.trim_end_matches("\\");
-        let dst_path = Path::new(&dst_str);
-        let apath = AssetPaths {
-            src: src_path.to_path_buf(),
-            dst: dst_path.to_path_buf(),
-        };
-        paths.push(apath);
+    } else {
+        for item in WalkDir::new(Path::new(src)) {
+            let item = item.unwrap();
+            let src_path = item.path();
+            let new_dst = append_path(src_path.to_str().unwrap(), dst);
+            let apath = AssetPaths {
+                src: src_path.to_path_buf(),
+                dst: PathBuf::from(new_dst),
+            };
+            paths.push(apath);
+        }
     }
     paths
 }

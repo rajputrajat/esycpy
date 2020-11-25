@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, trace};
 use log_panics;
 use regex::Regex;
 use serde::Deserialize;
@@ -86,6 +86,13 @@ impl FileOperations for AssetPaths {
     }
 
     fn common(&self) -> bool {
+        trace!(
+            "func: common(), file: {}, line: {}, src: {:?}, dst: {:?}",
+            file!(),
+            line!(),
+            self.src,
+            self.dst
+        );
         if self.src.is_dir() {
             self.create_dst_dir();
             false
@@ -101,6 +108,12 @@ impl FileOperations for AssetPaths {
         }
     }
     fn remove_dst(&self) {
+        trace!(
+            "func: remove_dst, file: {}, line: {}, dst: {:?}",
+            file!(),
+            line!(),
+            self.dst
+        );
         if self.dst.exists() {
             debug!("removing file '{:?}'", self.dst);
             fs::remove_file(&self.dst).expect("error in file deletion");
@@ -147,6 +160,7 @@ fn do_job(src: &str, dst: &str, todo: &str) {
 }
 
 fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
+    trace!("before processing: src: {}, dst: {}", src, dst);
     let mut paths: Vec<AssetPaths> = Vec::new();
     let mut src = src.trim_end_matches("\\").trim_end_matches("/");
     let re = Regex::new(r".+\\+\*\.([[:alnum:]]+)").unwrap();
@@ -157,17 +171,21 @@ fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
             let last_bslash = src.rfind("\\").unwrap();
             src = &src[..last_bslash];
         }
+        trace!("capture: {:?}", captures);
     }
-    fn append_path(src: &str, dst: &str) -> String {
-        let src_delta = &src[src.len()..];
-        let dst_str = dst.to_owned() + src_delta;
+    fn append_path(src_root: &str, dst_root: &str, src: &str) -> String {
+        let src_delta = &src[src_root.len()..];
+        let dst_str = dst_root.to_owned() + src_delta;
         dst_str.trim_end_matches("\\").to_owned()
     }
     if !filter.is_empty() {
+        trace!("filter value: {:?}, and src: {:?}", filter, src);
         for item in WalkDir::new(Path::new(src))
-            .max_depth(1)
+            .contents_first(true)
+            //.max_depth(1)
             .into_iter()
             .filter_entry(|x| {
+                debug!("reached with: {:?}", x);
                 if x.path().is_file() {
                     let file_extn = x.path().extension();
                     if let Some(v) = file_extn {
@@ -183,7 +201,7 @@ fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
             debug!("src path after filter: {:?}", item);
             let item = item.unwrap();
             let src_path = item.path();
-            let new_dst = append_path(src_path.to_str().unwrap(), dst);
+            let new_dst = append_path(src, dst, src_path.to_str().unwrap());
             let apath = AssetPaths {
                 src: src_path.to_path_buf(),
                 dst: PathBuf::from(new_dst),
@@ -194,7 +212,7 @@ fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
         for item in WalkDir::new(Path::new(src)) {
             let item = item.unwrap();
             let src_path = item.path();
-            let new_dst = append_path(src_path.to_str().unwrap(), dst);
+            let new_dst = append_path(src, dst, src_path.to_str().unwrap());
             let apath = AssetPaths {
                 src: src_path.to_path_buf(),
                 dst: PathBuf::from(new_dst),

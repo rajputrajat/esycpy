@@ -3,10 +3,11 @@ use log_panics;
 use regex::Regex;
 use serde::Deserialize;
 use simplelog::*;
-use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    env, fs,
+    path::{Path, PathBuf},
+};
 use walkdir::WalkDir;
 
 #[derive(Deserialize)]
@@ -55,6 +56,7 @@ trait FileOperations {
     fn common(&self) -> bool;
 }
 
+#[derive(Debug)]
 struct AssetPaths {
     src: PathBuf,
     dst: PathBuf,
@@ -97,6 +99,11 @@ impl FileOperations for AssetPaths {
             self.create_dst_dir();
             false
         } else {
+            let dst_parent = self.dst.parent().unwrap();
+            trace!("check dst parent: {:?}", dst_parent);
+            if !dst_parent.exists() {
+                fs::create_dir_all(dst_parent).expect("couldn't create parent dir");
+            }
             self.remove_dst();
             true
         }
@@ -116,6 +123,12 @@ impl FileOperations for AssetPaths {
         );
         if self.dst.exists() {
             debug!("removing file '{:?}'", self.dst);
+            let meta_data = fs::metadata(&self.dst).unwrap();
+            let mut permissions = meta_data.permissions();
+            if permissions.readonly() {
+                permissions.set_readonly(false);
+                fs::set_permissions(&self.dst, permissions).expect("unable to set the file perm");
+            }
             fs::remove_file(&self.dst).expect("error in file deletion");
         }
     }
@@ -171,42 +184,56 @@ fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
             let last_bslash = src.rfind("\\").unwrap();
             src = &src[..last_bslash];
         }
-        trace!("capture: {:?}", captures);
+        //trace!("capture: {:?}", captures);
     }
     fn append_path(src_root: &str, dst_root: &str, src: &str) -> String {
         let src_delta = &src[src_root.len()..];
+        trace!(
+            "append_path. src_root: {:?}, dst_root: {:?}, src_delta: {:?}",
+            src_root,
+            dst_root,
+            src_delta
+        );
         let dst_str = dst_root.to_owned() + src_delta;
         dst_str.trim_end_matches("\\").to_owned()
     }
+    fn is_hidden(entry: &Path) -> bool {
+        entry
+            .file_name()
+            .map(|s| s.to_str().unwrap().starts_with("."))
+            .unwrap_or(false)
+    }
     if !filter.is_empty() {
-        trace!("filter value: {:?}, and src: {:?}", filter, src);
-        for item in WalkDir::new(Path::new(src))
-            .contents_first(true)
-            //.max_depth(1)
-            .into_iter()
-            .filter_entry(|x| {
-                debug!("reached with: {:?}", x);
-                if x.path().is_file() {
-                    let file_extn = x.path().extension();
+        //trace!("filter value: {:?}, and src: {:?}", filter, src);
+        for item in fs::read_dir(src).expect("problem") {
+            let item = &item.unwrap().path();
+            fn is_process_required(x: &Path, filter: &str) -> bool {
+                //debug!("reached with: {:?}", x);
+                if is_hidden(x) {
+                    return false;
+                } else if x.is_dir() {
+                    return false;
+                } else {
+                    let file_extn = x.extension();
                     if let Some(v) = file_extn {
                         if v.to_str().unwrap().to_owned() == filter {
-                            debug!("ext found: {:?}", x);
+                            //debug!("ext found: {:?}", x);
                             return true;
                         }
                     }
                 }
                 false
-            })
-        {
-            debug!("src path after filter: {:?}", item);
-            let item = item.unwrap();
-            let src_path = item.path();
-            let new_dst = append_path(src, dst, src_path.to_str().unwrap());
-            let apath = AssetPaths {
-                src: src_path.to_path_buf(),
-                dst: PathBuf::from(new_dst),
-            };
-            paths.push(apath);
+            }
+            if is_process_required(&item, filter.as_str()) {
+                //debug!("src path after filter: {:?}", item);
+                let src_path = item;
+                let new_dst = append_path(src, dst, src_path.to_str().unwrap());
+                let apath = AssetPaths {
+                    src: src_path.to_path_buf(),
+                    dst: PathBuf::from(new_dst),
+                };
+                paths.push(apath);
+            }
         }
     } else {
         for item in WalkDir::new(Path::new(src)) {
@@ -220,6 +247,7 @@ fn get_asset_paths_for_processing(src: &str, dst: &str) -> Vec<AssetPaths> {
             paths.push(apath);
         }
     }
+    //trace!("paths: {:#?}", paths);
     paths
 }
 

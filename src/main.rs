@@ -300,7 +300,7 @@ mod tests {
     #[test]
     fn check_args_map_good() {
         let args = "one, two, three, four, five, six, seven";
-        let json_data = parse_json(Path::new("asset_relocation_def.json"));
+        let json_data = parse_json(Path::new("esycpy_def.json"));
         let args_map = map_args(&json_data, String::from(args));
         assert_eq!(args_map["{Configuration}"], "one");
         assert_eq!(args_map["{MonacoBinDir}"], "seven");

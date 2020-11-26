@@ -5,8 +5,7 @@
         "{ProjectName}",
         "{ProjectDir}",
         "{SolutionDir}",
-        "{OutDir}",
-        "{MonacoBinDir}"
+        "{OutDir}"
     ],
     "jobs": [
         {
@@ -16,38 +15,23 @@
         },
         {
             "todo": "hardlink",
-            "src": "{ProjectDir}/assets/class2/facade/BuffaloChiefNYL.db",
-            "dst": "{OutDir}/BuffaloChiefNYL.db"
+            "src": "{ProjectDir}/assets/content",
+            "dst": "{OutDir}/content"
         },
         {
             "todo": "hardlink",
-            "src": "{ProjectDir}/assets/class2/paytables",
-            "dst": "{OutDir}/paytables"
-        },
-        {
-            "todo": "hardlink",
-            "src": "{OutDir}",
-            "dst": "{MonacoBinDir}/{Configuration}/Games/{ProjectName}/bin"
-        },
-        {
-            "todo": "hardlink",
-            "src": "{OutDir}/../../../../Tools/GDKRuntimeHost/{Platform}/{Configuration}",
-            "dst": "{MonacoBinDir}/{Configuration}/Runtime/bin"
-        },
-        {
-            "todo": "hardlink",
-            "src": "{ProjectDir}/host.cmdline",
-            "dst": "{MonacoBinDir}/{Configuration}/Runtime/bin/host.cmdline"
-        },
-        {
-            "todo": "hardlink",
-            "src": "{ProjectDir}/assets/vlt_lobby",
-            "dst": "{MonacoBinDir}/{Configuration}/Games/{ProjectName}"
+            "src": "{ProjectDir}/assets/*.xml",
+            "dst": "{OutDir}"
         },
         {
             "todo": "copy",
-            "src": "",
-            "dst": ""
+            "src": "{ProjectDir}/assets/setup.txt",
+            "dst": "{OutDir}/setup.txt"
+        },
+        {
+            "todo": "move",
+            "src": "{ProjectDir}/assets/setup.txt",
+            "dst": "{OutDir}/setup.txt"
         }
     ]
 }

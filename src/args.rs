@@ -1,4 +1,4 @@
-use clap::{Arg, App, SubCommand};
+use clap::{Arg, App, SubCommand, ErrorKind};
 
 pub enum Operation {
     Copy_,
@@ -18,7 +18,7 @@ pub enum ArgsType {
     }
 }
 
-pub fn get_args() {
+pub fn get_args() -> ArgsType {
     let arg_from = Arg::with_name("from")
         .short("s")
         .long("from")
@@ -51,9 +51,8 @@ pub fn get_args() {
         .arg(Arg::with_name("json_file")
             .short("j")
             .long("json")
-            .help("json input file path which defines copy/move/hardlink operations")
             .takes_value(true)
-            .value_name("json_file_path")
+            .value_name("JSON_FILE_PATH")
             .required(true))
         .arg(Arg::with_name("variables")
             .short("v")
@@ -61,9 +60,41 @@ pub fn get_args() {
             .requires("json_file")
             .required(false)
             .min_values(0)
-            .value_name("VARIABLE_NAME_VALUE_PAIR")
-            .help("variables used in json file, provide each var in [var_name=var_value] way"))
+            .validator(|v| -> Result<(), String> {
+                if v.contains("=") {
+                    Ok(())
+                } else {
+                    Err(String::from("assignment operator not found. check help."))
+                }
+            })
+            .value_name("VARIABLE_NAME_VALUE_PAIR"))
         .get_matches();
+    let json_file_path = matches.value_of("json_file");
+    if let Some(json_file_path) = json_file_path {
+        let variables: Vec<&str> = matches.values_of("variables").unwrap().collect();
+        ArgsType::Json{
+            json_file: json_file_path.to_owned(),
+            variables: None
+        }
+    } else {
+        let subcommand = match matches.subcommand_name() {
+            Some("copy") => ("copy", Operation::Copy_),
+            Some("move") => ("move", Operation::Move),
+            Some("hardlink") => ("hardlink", Operation::Hardlink),
+            _ => panic!("incorrect subcommand")
+        };
+        if let Some(subcommand_matches) = matches.subcommand_matches(subcommand.0) {
+            let source = subcommand_matches.value_of("from").unwrap();
+            let destination = subcommand_matches.value_of("to").unwrap();
+            ArgsType::CmdLine {
+                op: subcommand.1,
+                from: source.to_owned(),
+                to: destination.to_owned()
+            }
+        } else {
+            panic!("neither json option is provided, nor cmdline option is used");
+        }
+    }
 }
 
 const HELP: &str = r#"

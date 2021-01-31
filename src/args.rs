@@ -1,4 +1,4 @@
-use clap::{Arg, App, SubCommand, ErrorKind};
+use clap::{Arg, App, SubCommand};
 
 pub enum Operation {
     Copy_,
@@ -72,9 +72,16 @@ pub fn get_args() -> ArgsType {
     let json_file_path = matches.value_of("json_file");
     if let Some(json_file_path) = json_file_path {
         let variables: Vec<&str> = matches.values_of("variables").unwrap().collect();
+        let variables = variables
+            .iter()
+            .fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
+                let name_value: Vec<&str> = (*v).split('=').collect();
+                vec.push((String::from(name_value[0]), String::from(name_value[1])));
+                vec
+            });
         ArgsType::Json{
             json_file: json_file_path.to_owned(),
-            variables: None
+            variables: Some(variables)
         }
     } else {
         let subcommand = match matches.subcommand_name() {

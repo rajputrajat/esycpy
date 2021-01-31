@@ -71,7 +71,6 @@ pub fn get_args() -> ArgsType {
         .get_matches();
     let json_file_path = matches.value_of("json_file");
     if let Some(json_file_path) = json_file_path {
-        //let variables: Vec<&str> = matches.values_of("variables").unwrap().collect();
         if let Some(variables) = matches.values_of("variables") {
             let variables = variables
                 .fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
@@ -94,7 +93,7 @@ pub fn get_args() -> ArgsType {
             Some("copy") => ("copy", Operation::Copy_),
             Some("move") => ("move", Operation::Move),
             Some("hardlink") => ("hardlink", Operation::Hardlink),
-            _ => panic!("incorrect subcommand")
+            _ => panic!("incorrect subcommand. use help command")
         };
         if let Some(subcommand_matches) = matches.subcommand_matches(subcommand.0) {
             let source = subcommand_matches.value_of("from").unwrap();
@@ -105,7 +104,7 @@ pub fn get_args() -> ArgsType {
                 to: destination.to_owned()
             }
         } else {
-            panic!("neither json option is provided, nor cmdline option is used");
+            panic!("neither json option is provided, nor cmdline option is used. use help command");
         }
     }
 }

@@ -1,4 +1,5 @@
 use clap::{Arg, App, SubCommand};
+use std::path::{PathBuf, Path};
 
 #[derive(Debug, PartialEq)]
 pub enum Operation {
@@ -15,7 +16,7 @@ pub enum ArgsType {
         to: String,
     },
     Json {
-        json_file: String,
+        json_file: PathBuf,
         variables: Option<Vec<(String, String)>>
     }
 }
@@ -54,6 +55,14 @@ pub fn get_args() -> ArgsType {
             .short("j")
             .long("json")
             .takes_value(true)
+            .validator(|p| -> Result<(), String> {
+                let jfile = Path::new(p.as_str()).canonicalize();
+                if jfile.is_ok() {
+                    Ok(())
+                } else {
+                    Err(String::from("json file path isn't correct."))
+                }
+            })
             .value_name("JSON_FILE_PATH"))
         .arg(Arg::with_name("variables")
             .short("v")
@@ -71,6 +80,7 @@ pub fn get_args() -> ArgsType {
         .get_matches();
     let json_file_path = matches.value_of("json_file");
     if let Some(json_file_path) = json_file_path {
+        let json_file = Path::new(json_file_path).to_owned();
         if let Some(variables) = matches.values_of("variables") {
             let variables = variables
                 .fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
@@ -79,12 +89,12 @@ pub fn get_args() -> ArgsType {
                     vec
             });
             ArgsType::Json{
-                json_file: json_file_path.to_owned(),
+                json_file,
                 variables: Some(variables)
             }
         } else {
             ArgsType::Json{
-                json_file: json_file_path.to_owned(),
+                json_file,
                 variables: None
             }
         }

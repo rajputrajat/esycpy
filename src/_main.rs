@@ -1,36 +1,6 @@
 use log::{debug, trace};
 use log_panics;
 use regex::Regex;
-use serde::Deserialize;
-use simplelog::*;
-use std::{
-    collections::HashMap,
-    env, fs,
-    path::{Path, PathBuf},
-};
-use walkdir::WalkDir;
-
-#[derive(Deserialize)]
-struct AssetRelocationDef {
-    variables_in_use: Vec<String>,
-    jobs: Vec<JobConfigs>,
-}
-
-#[derive(Deserialize, Debug)]
-struct JobConfigs {
-    todo: String,
-    src: String,
-    dst: String,
-}
-
-fn parse_json(path: &Path) -> AssetRelocationDef {
-    let json_text = fs::read_to_string(path).expect("couldn't read file");
-    debug!("{} file is read", path.to_str().unwrap());
-    let json_data: AssetRelocationDef =
-        serde_json::from_str(&json_text).expect("json file format doesn't comply");
-    debug!("json file is parsed");
-    json_data
-}
 
 fn map_args(json_data: &AssetRelocationDef, args: String) -> HashMap<String, String> {
     let args: Vec<String> = args.split(", ").map(|x| String::from(x)).collect();

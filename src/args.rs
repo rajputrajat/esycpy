@@ -1,11 +1,13 @@
 use clap::{Arg, App, SubCommand};
 
+#[derive(Debug, PartialEq)]
 pub enum Operation {
     Copy_,
     Move,
     Hardlink
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ArgsType {
     CmdLine {
         op: Operation,
@@ -69,17 +71,23 @@ pub fn get_args() -> ArgsType {
         .get_matches();
     let json_file_path = matches.value_of("json_file");
     if let Some(json_file_path) = json_file_path {
-        let variables: Vec<&str> = matches.values_of("variables").unwrap().collect();
-        let variables = variables
-            .iter()
-            .fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
-                let name_value: Vec<&str> = (*v).split('=').collect();
-                vec.push((String::from(name_value[0]), String::from(name_value[1])));
-                vec
+        //let variables: Vec<&str> = matches.values_of("variables").unwrap().collect();
+        if let Some(variables) = matches.values_of("variables") {
+            let variables = variables
+                .fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
+                    let name_value: Vec<&str> = (*v).split('=').collect();
+                    vec.push((String::from(name_value[0]), String::from(name_value[1])));
+                    vec
             });
-        ArgsType::Json{
-            json_file: json_file_path.to_owned(),
-            variables: Some(variables)
+            ArgsType::Json{
+                json_file: json_file_path.to_owned(),
+                variables: Some(variables)
+            }
+        } else {
+            ArgsType::Json{
+                json_file: json_file_path.to_owned(),
+                variables: None
+            }
         }
     } else {
         let subcommand = match matches.subcommand_name() {

@@ -1,5 +1,6 @@
 mod args;
 
 fn main() {
-    args::get_args();
+    let args = args::get_args();
+    println!("{:#?}", args);
 }

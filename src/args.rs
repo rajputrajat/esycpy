@@ -136,16 +136,6 @@ SUBCOMMANDS:
     move            move file/dir from source to destination
 
 EXAMPLES:
-    USING OPTIONS:
-    1. Create hardlink of file to new_hard_link
-        > esycpy hardlink -s c:/users/example/file -d c:/users/example/new_hard_link
-    2. Create hardlink of dir recursively
-        > esycpy hardlink -s c:/users/example/dir1 -d c:/users/example/dir_with_hlinks
-    3. Move xml files from this dir to destination dir
-        > esycpy move -s c:/users/example/dir2/*.xml -d c:/users/example/dir_move_in_here
-    4. Copy all ogg files recursively to destination dir
-        > esycpy copy /home/example/audios/**.ogg /home/example/only_oggs
-
     USING INPUT JSON FILE:
     > esycpy -j /home/example/asset_copier.json
     ------------------------- ASSET_COPIER.JSON -----------------------------
@@ -193,4 +183,14 @@ EXAMPLES:
     |        },                                                             |
     |    ]                                                                  |
     |}                                                                      |
-    ---------------------------------------------------------------------- "#;
+    -------------------------------------------------------------------------
+
+    USING OPTIONS:
+    1. Create hardlink of file to new_hard_link
+        > esycpy hardlink -s c:/users/example/file -d c:/users/example/new_hard_link
+    2. Create hardlink of dir recursively
+        > esycpy hardlink -s c:/users/example/dir1 -d c:/users/example/dir_with_hlinks
+    3. Move xml files from this dir to destination dir
+        > esycpy move -s c:/users/example/dir2/*.xml -d c:/users/example/dir_move_in_here
+    4. Copy all ogg files recursively to destination dir
+        > esycpy copy /home/example/audios/**.ogg /home/example/only_oggs"#;

@@ -57,8 +57,7 @@ pub fn get_args() -> ArgsType {
             .short("v")
             .long("variables")
             .requires("json_file")
-            .required(false)
-            .min_values(0)
+            .min_values(1)
             .validator(|v| -> Result<(), String> {
                 if v.contains("=") {
                     Ok(())

@@ -115,4 +115,40 @@ mod tests {
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
     }
+
+    #[test]
+    fn no_vars() {
+        let asset_def = AssetRelocationDef {
+            variables_in_use: vec![
+            ],
+            jobs: vec![
+                JobConfigs {
+                    todo: "copy".to_owned(),
+                    src: "this/is/var1/yes".to_owned(),
+                    dst: "this/is/var2/yes".to_owned(),
+                },
+                JobConfigs {
+                    todo: "hardlink".to_owned(),
+                    src: "this/is/var4/yes".to_owned(),
+                    dst: "this/is/var3/yes".to_owned(),
+                },
+                JobConfigs {
+                    todo: "move".to_owned(),
+                    src: "this/is/var2/yes".to_owned(),
+                    dst: "this/is/var3/yes".to_owned(),
+                }
+            ]
+        };
+        let variables = None;
+        let mut ops = vec![Operation::Move, Operation::Hardlink, Operation::Copy_];
+        let mut arg_types: Vec<ArgsType> = Vec::new();
+        asset_def.jobs.iter().for_each(|d| {
+            arg_types.push(ArgsType::CmdLine {
+                op: ops.pop().unwrap(),
+                to: d.dst.clone(),
+                from: d.src.clone()
+            })
+        });
+        assert_eq!(arg_types, map_variables(asset_def, variables));
+    }
 }

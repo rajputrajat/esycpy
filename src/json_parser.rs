@@ -1,4 +1,4 @@
-use crate::args::ArgsType;
+use crate::args::{ArgsType, Operation};
 use log::debug;
 use serde::Deserialize;
 use std::fs;
@@ -11,10 +11,38 @@ pub fn get_json_args(args: ArgsType) -> Vec<ArgsType> {
             variables,
         } => {
             let json_def = parse_json(Path::new(&json_file).as_ref());
-            Vec::new()
+            map_variables(json_def, variables)
         }
         _ => unreachable!(),
     }
+}
+
+fn map_variables(
+    asset_def: AssetRelocationDef,
+    variables: Option<Vec<(String, String)>>) -> Vec<ArgsType>
+{
+    assert_eq!(variables.is_none(), asset_def.variables_in_use.len() == 0);
+    let mut mapped_args: Vec<ArgsType> = Vec::new();
+    asset_def.jobs.into_iter().for_each(|mut d| {
+        let todo: Operation = match d.todo.as_str() {
+            "copy" => Operation::Copy_,
+            "move" => Operation::Move,
+            "hardlink" => Operation::Hardlink,
+            _ => unreachable!()
+        };
+        if let Some(variables) = variables.clone() {
+            variables.iter().for_each(|v| {
+                d.src = d.src.replace(v.0.as_str(), v.1.as_str());
+            });
+        };
+        let mapped_arg = ArgsType::CmdLine {
+            op: todo,
+            from: d.src,
+            to: d.dst
+        };
+        mapped_args.push(mapped_arg)
+    });
+    mapped_args
 }
 
 #[derive(Deserialize)]
@@ -37,4 +65,53 @@ fn parse_json(path: &Path) -> AssetRelocationDef {
         serde_json::from_str(&json_text).expect("json file format doesn't comply");
     debug!("json file is parsed");
     json_data
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn map_var_correct() {
+        let asset_def = AssetRelocationDef {
+            variables_in_use: vec![
+                "var1".to_owned(),
+                "var2".to_owned(),
+                "var3".to_owned(),
+                "var4".to_owned()
+            ],
+            jobs: vec![
+                JobConfigs {
+                    todo: "copy".to_owned(),
+                    src: "this/is/var1/yes".to_owned(),
+                    dst: "this/is/var2/yes".to_owned(),
+                },
+                JobConfigs {
+                    todo: "hardlink".to_owned(),
+                    src: "this/is/var4/yes".to_owned(),
+                    dst: "this/is/var3/yes".to_owned(),
+                },
+                JobConfigs {
+                    todo: "move".to_owned(),
+                    src: "this/is/var2/yes".to_owned(),
+                    dst: "this/is/var3/yes".to_owned(),
+                }
+            ]
+        };
+        let variables = Some(vec![
+            ("var1".to_owned(), "VAR1".to_owned()),
+            ("var2".to_owned(), "VAR2".to_owned()),
+            ("var3".to_owned(), "VAR3".to_owned()),
+            ("var4".to_owned(), "VAR4".to_owned())
+        ]);
+        let mut ops = vec![Operation::Move, Operation::Hardlink, Operation::Copy_];
+        let mut arg_types: Vec<ArgsType> = Vec::new();
+        asset_def.jobs.iter().for_each(|d| {
+            arg_types.push(ArgsType::CmdLine {
+                op: ops.pop().unwrap(),
+                to: d.dst.replace("var", "VAR"),
+                from: d.src.replace("var", "VAR")
+            })
+        });
+        assert_eq!(arg_types, map_variables(asset_def, variables));
+    }
 }

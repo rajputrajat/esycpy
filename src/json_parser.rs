@@ -21,14 +21,25 @@ fn map_variables(
     asset_def: AssetRelocationDef,
     variables: Option<Vec<(String, String)>>) -> Vec<ArgsType>
 {
-    assert_eq!(variables.is_none(), asset_def.variables_in_use.len() == 0);
+    assert_eq!(
+        variables.is_none(),
+        asset_def.variables_in_use.len() == 0,
+        "either json file is missing vars, or command line"
+    );
+    if variables.is_some() {
+        assert_eq!(
+            variables.clone().unwrap().len(),
+            asset_def.variables_in_use.len(),
+            "vars count mismatch"
+        );
+    }
     let mut mapped_args: Vec<ArgsType> = Vec::new();
     asset_def.jobs.into_iter().for_each(|mut d| {
         let todo: Operation = match d.todo.as_str() {
             "copy" => Operation::Copy_,
             "move" => Operation::Move,
             "hardlink" => Operation::Hardlink,
-            _ => unreachable!()
+            _ => panic!("unhandled operation")
         };
         if let Some(variables) = variables.clone() {
             variables.iter().for_each(|v| {
@@ -147,6 +158,67 @@ mod tests {
                 op: ops.pop().unwrap(),
                 to: d.dst.clone(),
                 from: d.src.clone()
+            })
+        });
+        assert_eq!(arg_types, map_variables(asset_def, variables));
+    }
+
+    #[test]
+    #[should_panic(expected = "either json file is missing vars, or command line")]
+    fn incompatible_vars() {
+        let asset_def = AssetRelocationDef {
+            variables_in_use: vec![
+            ],
+            jobs: vec![
+                JobConfigs {
+                    todo: "copy".to_owned(),
+                    src: "this/is/var1/yes".to_owned(),
+                    dst: "this/is/var2/yes".to_owned(),
+                },
+            ]
+        };
+        let variables = Some(vec![
+            ("var1".to_owned(), "VAR1".to_owned()),
+            ("var3".to_owned(), "VAR3".to_owned()),
+        ]);
+        let mut ops = vec![Operation::Copy_];
+        let mut arg_types: Vec<ArgsType> = Vec::new();
+        asset_def.jobs.iter().for_each(|d| {
+            arg_types.push(ArgsType::CmdLine {
+                op: ops.pop().unwrap(),
+                to: d.dst.clone(),
+                from: d.src.clone()
+            })
+        });
+        assert_eq!(arg_types, map_variables(asset_def, variables));
+    }
+
+    #[test]
+    #[should_panic(expected = "vars count mismatch")]
+    fn vars_count_mismatch() {
+        let asset_def = AssetRelocationDef {
+            variables_in_use: vec![
+                "var1".to_owned(),
+                "var2".to_owned(),
+            ],
+            jobs: vec![
+                JobConfigs {
+                    todo: "move".to_owned(),
+                    src: "this/is/var2/yes".to_owned(),
+                    dst: "this/is/var3/yes".to_owned(),
+                }
+            ]
+        };
+        let variables = Some(vec![
+            ("var1".to_owned(), "VAR1".to_owned()),
+        ]);
+        let mut ops = vec![Operation::Move];
+        let mut arg_types: Vec<ArgsType> = Vec::new();
+        asset_def.jobs.iter().for_each(|d| {
+            arg_types.push(ArgsType::CmdLine {
+                op: ops.pop().unwrap(),
+                to: d.dst.replace("var", "VAR"),
+                from: d.src.replace("var", "VAR")
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));

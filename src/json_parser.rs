@@ -58,7 +58,7 @@ fn map_variables(
 }
 
 #[derive(Deserialize)]
-pub struct AssetRelocationDef {
+struct AssetRelocationDef {
     variables_in_use: Vec<String>,
     jobs: Vec<JobConfigs>,
 }
@@ -222,5 +222,32 @@ mod tests {
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
+    }
+
+    #[test]
+    fn get_json_args_pass() {
+        let input_json_args = ArgsType::Json {
+            json_file: Path::new("./test_files/asset_relocation_def.json").to_owned(),
+            variables: Some(vec![
+                (String::from("{Configuration}"), String::from("debug")),
+                (String::from("{ProjectName}"), String::from("test_proj")),
+                (String::from("{ProjectDir}"), String::from("c:/Users/test/proj_dir")),
+                (String::from("{SolutionDir}"), String::from("c:/Users/test/sol_dir")),
+                (String::from("{OutDir}"), String::from("c:/Users/test/out_dir")),
+            ])
+        };
+        let out_args = vec![
+            ArgsType::CmdLine {
+                op: Operation::Hardlink,
+                from: String::from("c:/Users/test/sol_dir/../Bink2/lib/*.dll"),
+                to: String::from("c:/Users/test/out_dir")
+            },
+            ArgsType::CmdLine {
+                op: Operation::Move,
+                from: String::from("c:/Users/test/proj_dir/assets"),
+                to: String::from("c:/Users/test/out_dir/debug/Games/test_proj")
+            }
+        ];
+        assert_eq!(out_args, get_json_args(input_json_args));
     }
 }

@@ -1,0 +1,21 @@
+{
+    "variables_in_use": [
+        "{Configuration}",
+        "{ProjectName}",
+        "{ProjectDir}",
+        "{SolutionDir}",
+        "{OutDir}"
+    ],
+    "jobs": [
+        {
+            "todo": "hardlink",
+            "src": "{SolutionDir}/../Bink2/lib/*.dll",
+            "dst": "{OutDir}"
+        },
+        {
+            "todo": "move",
+            "src": "{ProjectDir}/assets",
+            "dst": "{OutDir}/{Configuration}/Games/{ProjectName}"
+        }
+    ]
+}

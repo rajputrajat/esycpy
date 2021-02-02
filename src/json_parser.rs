@@ -33,6 +33,7 @@ fn map_variables(
         if let Some(variables) = variables.clone() {
             variables.iter().for_each(|v| {
                 d.src = d.src.replace(v.0.as_str(), v.1.as_str());
+                d.dst = d.dst.replace(v.0.as_str(), v.1.as_str());
             });
         };
         let mapped_arg = ArgsType::CmdLine {

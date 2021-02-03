@@ -3,6 +3,7 @@ use std::fs::File;
 
 mod args;
 mod json_parser;
+mod operations;
 
 fn main() {
     setup_logger();

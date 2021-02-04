@@ -111,7 +111,10 @@ impl FileOperations for AssetPaths {
     fn create_dst_dir(&self) {
         if !self.dst.exists() {
             debug!("creating dir: {:?}", self.dst);
-            fs::create_dir_all(&self.dst).expect("couldn't create dir");
+            fs::create_dir_all(&self.dst).expect(&format!(
+                "couldn't create dir: {}",
+                self.dst.to_str().unwrap()
+            ));
         }
     }
     fn remove_dst(&self) {
@@ -153,7 +156,25 @@ fn do_jobs(json_data: &AssetRelocationDef, args_map: &HashMap<String, String>) {
         dst.push('\\');
         let src = fix_windows_path(src);
         let dst = fix_windows_path(dst);
-        do_job(src.as_str(), dst.as_str(), job.todo.as_str());
+        if is_dst_valid(dst.as_str()) {
+            do_job(src.as_str(), dst.as_str(), job.todo.as_str());
+        }
+    }
+}
+
+fn is_dst_valid(dst: &str) -> bool {
+    let mut dst_path = Path::new(dst);
+    loop {
+        if dst_path.exists() {
+            return true;
+        } else {
+            let parent = dst_path.parent();
+            if let Some(parent) = parent {
+                dst_path = parent;
+            } else {
+                return false;
+            }
+        }
     }
 }
 
@@ -279,7 +300,7 @@ mod tests {
     use super::*;
     #[test]
     fn json_parsing() {
-        let value = parse_json(Path::new("asset_relocation_def.json"));
+        let value = parse_json(Path::new("esycpy_def.json"));
         let value_iter = value.variables_in_use.iter();
         assert_eq!(
             *value_iter.peekable().peek().unwrap(),
@@ -291,10 +312,9 @@ mod tests {
             &String::from("{MonacoBinDir}")
         );
         assert_eq!(
-            &value.jobs[6].dst,
-            "{MonacoBinDir}/{Configuration}/Games/{ProjectName}"
+            &value.jobs[4].src,
+            "{ProjectDir}/assets/setup.txt",
         );
-        assert_eq!(&value.jobs[5].src, "{ProjectDir}/host.cmdline");
     }
 
     #[test]
@@ -335,5 +355,13 @@ mod tests {
         let test_str = "c:\\hello\\there\\*.xml";
         let ind = test_str.rfind("\\").unwrap();
         assert_eq!("c:\\hello\\there", &test_str[..ind]);
+    }
+
+    #[test]
+    fn dst_valid() {
+        assert_eq!(is_dst_valid("c:/users/test/invalid_path"), true);
+        assert_eq!(is_dst_valid(" c:/users/test/invalid_path"), false);
+        assert_eq!(is_dst_valid(" \\Debug\\bin"), false);
+        assert_eq!(is_dst_valid("c:\\users\\Debug\\bin"), true);
     }
 }

@@ -46,6 +46,22 @@ impl FileOp {
         });
         only_one_slash
     }
+
+    fn is_dst_valid(dst: &str) -> bool {
+        let mut dst_path = Path::new(dst);
+        loop {
+            if dst_path.exists() {
+                return true;
+            } else {
+                let parent = dst_path.parent();
+                if let Some(parent) = parent {
+                    dst_path = parent;
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
 }
 
 

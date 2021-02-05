@@ -1,5 +1,6 @@
 use crate::args::{ArgsType, Operation};
 use std::fs;
+use std::path::Path;
 
 enum OperationTypes {
     FileToFile,
@@ -73,5 +74,13 @@ mod tests {
     fn fix_path_positive() {
         assert_eq!(FileOp::fix_path("c:\\\\\\Users\\\\\\\\test///dir"), String::from("c:/Users/test/dir"));
         assert_eq!(FileOp::fix_path("/mnt///dr"), String::from("/mnt/dr"));
+    }
+
+    #[test]
+    fn dst_valid() {
+        assert_eq!(FileOp::is_dst_valid("c:/users/test/invalid_path"), true);
+        assert_eq!(FileOp::is_dst_valid(" c:/users/test/invalid_path"), false);
+        assert_eq!(FileOp::is_dst_valid(" \\Debug\\bin"), false);
+        assert_eq!(FileOp::is_dst_valid("c:\\users\\Debug\\bin"), true);
     }
 }

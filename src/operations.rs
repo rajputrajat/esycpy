@@ -29,7 +29,31 @@ impl FileOp {
     }
 
     pub fn process() {
+    }
 
+    fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) {
+        match self.op {
+            Operation::Copy_ => {
+                let _ = fs::copy(src.as_ref(), dst.as_ref())
+                    .unwrap_or_else(|_| panic!("couldn't copy from {} to {}",
+                            src.as_ref().to_str().unwrap(),
+                            dst.as_ref().to_str().unwrap()));
+            }
+            Operation::Hardlink => {
+                fs::hard_link(src.as_ref(), dst.as_ref())
+                    .unwrap_or_else(|_| panic!("couldn't create hard_link, from {} to {}",
+                            src.as_ref().to_str().unwrap(),
+                            dst.as_ref().to_str().unwrap()));
+            }
+            Operation::Move => {
+                fs::rename(src.as_ref(), dst.as_ref())
+                    .unwrap_or_else(|_| panic!("couldn't move from {} to {}",
+                            src.as_ref().to_str().unwrap(),
+                            dst.as_ref().to_str().unwrap()));
+            }
+        }
+    }
+    fn file_to_file(&self) {
 
     }
 

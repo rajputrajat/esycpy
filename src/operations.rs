@@ -101,9 +101,7 @@ mod tests {
         let src_dir = tmp_dir.path().join("src");
         fs::create_dir_all(src_dir.as_path()).unwrap();
         let src_file = src_dir.join("sample_file");
-        let _ = fs::copy(
-            "test_files/for_file_operations/sample_file",
-            src_file.as_path())
+        let _ = fs::copy("test_files/for_file_operations/sample_file", src_file.as_path())
             .unwrap();
         assert!(src_file.exists());
         let file_op = FileOp { op: Operation::Copy_, from: String::new(), to: String::new() };
@@ -115,14 +113,16 @@ mod tests {
             dst_file.to_str().unwrap().to_owned()
         );
         assert!(dst_file.exists());
-        let src_file_text = fs::read_to_string(src_file.join("sample_file")).unwrap();
-        let dst_file_text = fs::read_to_string(dst_file.join("sample_file")).unwrap();
+        let src_file_text = fs::read_to_string(src_file).unwrap();
+        let dst_file_text = fs::read_to_string(dst_file).unwrap();
         assert_eq!(src_file_text, dst_file_text);
     }
 
     #[test]
     fn fix_path_positive() {
-        assert_eq!(FileOp::fix_path("c:\\\\\\Users\\\\\\\\test///dir"), String::from("c:/Users/test/dir"));
+        assert_eq!(
+            FileOp::fix_path("c:\\\\\\Users\\\\\\\\test///dir"),
+            String::from("c:/Users/test/dir"));
         assert_eq!(FileOp::fix_path("/mnt///dr"), String::from("/mnt/dr"));
     }
 

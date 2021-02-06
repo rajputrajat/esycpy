@@ -96,27 +96,27 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn check_file_ops_copy() {
+    fn check_ops_copy_file() {
         let tmp_dir = TempDir::new().unwrap();
-        let tmp_src = tmp_dir.path().join("src");
-        fs::create_dir_all(tmp_src.as_path()).unwrap();
-        println!("{}", tmp_src.to_str().unwrap());
-        let tmp_copy_src_file = tmp_src.join("sample_file");
+        let src_dir = tmp_dir.path().join("src");
+        fs::create_dir_all(src_dir.as_path()).unwrap();
+        let src_file = src_dir.join("sample_file");
         let _ = fs::copy(
             "test_files/for_file_operations/sample_file",
-            tmp_copy_src_file.as_path())
+            src_file.as_path())
             .unwrap();
-        assert!(tmp_src.exists());
-        let copy_op = FileOp { op: Operation::Copy_, from: String::new(), to: String::new() };
-        let copy_dst = tmp_dir.path().join("dst_copy");
-        let tmp_copy_dst_file = copy_dst.join("sample_file");
-        fs::create_dir_all(copy_dst.as_path()).unwrap();
-        let copy_from = tmp_copy_src_file.to_str().unwrap().to_owned();
-        let copy_to = tmp_copy_dst_file.to_str().unwrap().to_owned();
-        copy_op.file_op(copy_from, copy_to);
-        let src_file_text = fs::read_to_string(tmp_src.join("sample_file")).unwrap();
-        let dst_file_text = fs::read_to_string(copy_dst.join("sample_file")).unwrap();
-        assert!(copy_dst.exists());
+        assert!(src_file.exists());
+        let file_op = FileOp { op: Operation::Copy_, from: String::new(), to: String::new() };
+        let dst_dir = tmp_dir.path().join("dst_copy");
+        fs::create_dir_all(dst_dir.as_path()).unwrap();
+        let dst_file = dst_dir.join("sample_file");
+        file_op.file_op(
+            src_file.to_str().unwrap().to_owned(),
+            dst_file.to_str().unwrap().to_owned()
+        );
+        assert!(dst_file.exists());
+        let src_file_text = fs::read_to_string(src_file.join("sample_file")).unwrap();
+        let dst_file_text = fs::read_to_string(dst_file.join("sample_file")).unwrap();
         assert_eq!(src_file_text, dst_file_text);
     }
 

@@ -104,7 +104,7 @@ mod tests {
         let _ = fs::copy("test_files/for_file_operations/sample_file", src_file.as_path())
             .unwrap();
         assert!(src_file.exists());
-        let file_op = FileOp { op: Operation::Move, from: String::new(), to: String::new() };
+        let file_op = FileOp { op: Operation::Hardlink, from: String::new(), to: String::new() };
         let dst_dir = tmp_dir.path().join("dst");
         fs::create_dir_all(dst_dir.as_path()).unwrap();
         let dst_file = dst_dir.join("sample_file");

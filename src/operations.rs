@@ -32,6 +32,11 @@ impl FileOp {
     }
 
     fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) {
+        assert!(src.as_ref().exists());
+        assert!(FileOp::is_dst_valid(dst.as_ref().to_str().unwrap()));
+        if !dst.as_ref().parent().unwrap().exists() {
+            fs::create_dir_all(dst.as_ref().parent().unwrap()).unwrap();
+        }
         match self.op {
             Operation::Copy_ => {
                 let _ = fs::copy(src.as_ref(), dst.as_ref())
@@ -53,6 +58,7 @@ impl FileOp {
             }
         }
     }
+
     fn file_to_file(&self) {
 
     }
@@ -106,7 +112,6 @@ mod tests {
         assert!(src_file.exists());
         let file_op = FileOp { op: Operation::Hardlink, from: String::new(), to: String::new() };
         let dst_dir = tmp_dir.path().join("dst");
-        fs::create_dir_all(dst_dir.as_path()).unwrap();
         let dst_file = dst_dir.join("sample_file");
         file_op.file_op(
             src_file.to_str().unwrap().to_owned(),
@@ -130,7 +135,6 @@ mod tests {
         assert!(src_file.exists());
         let file_op = FileOp { op: Operation::Move, from: String::new(), to: String::new() };
         let dst_dir = tmp_dir.path().join("dst");
-        fs::create_dir_all(dst_dir.as_path()).unwrap();
         let dst_file = dst_dir.join("sample_file");
         file_op.file_op(
             src_file.to_str().unwrap().to_owned(),
@@ -155,7 +159,6 @@ mod tests {
         assert!(src_file.exists());
         let file_op = FileOp { op: Operation::Copy_, from: String::new(), to: String::new() };
         let dst_dir = tmp_dir.path().join("dst");
-        fs::create_dir_all(dst_dir.as_path()).unwrap();
         let dst_file = dst_dir.join("sample_file");
         file_op.file_op(
             src_file.to_str().unwrap().to_owned(),

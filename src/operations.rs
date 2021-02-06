@@ -96,6 +96,31 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    fn check_ops_move_file() {
+        let tmp_dir = TempDir::new().unwrap();
+        let src_dir = tmp_dir.path().join("src");
+        fs::create_dir_all(src_dir.as_path()).unwrap();
+        let src_file = src_dir.join("sample_file");
+        let _ = fs::copy("test_files/for_file_operations/sample_file", src_file.as_path())
+            .unwrap();
+        assert!(src_file.exists());
+        let file_op = FileOp { op: Operation::Move, from: String::new(), to: String::new() };
+        let dst_dir = tmp_dir.path().join("dst");
+        fs::create_dir_all(dst_dir.as_path()).unwrap();
+        let dst_file = dst_dir.join("sample_file");
+        file_op.file_op(
+            src_file.to_str().unwrap().to_owned(),
+            dst_file.to_str().unwrap().to_owned()
+        );
+        assert!(!src_file.exists());
+        assert!(dst_file.exists());
+        let src_file_text = fs::read_to_string("test_files/for_file_operations/sample_file")
+            .unwrap();
+        let dst_file_text = fs::read_to_string(dst_file).unwrap();
+        assert_eq!(src_file_text, dst_file_text);
+    }
+
+    #[test]
     fn check_ops_copy_file() {
         let tmp_dir = TempDir::new().unwrap();
         let src_dir = tmp_dir.path().join("src");
@@ -105,13 +130,14 @@ mod tests {
             .unwrap();
         assert!(src_file.exists());
         let file_op = FileOp { op: Operation::Copy_, from: String::new(), to: String::new() };
-        let dst_dir = tmp_dir.path().join("dst_copy");
+        let dst_dir = tmp_dir.path().join("dst");
         fs::create_dir_all(dst_dir.as_path()).unwrap();
         let dst_file = dst_dir.join("sample_file");
         file_op.file_op(
             src_file.to_str().unwrap().to_owned(),
             dst_file.to_str().unwrap().to_owned()
         );
+        assert!(src_file.exists());
         assert!(dst_file.exists());
         let src_file_text = fs::read_to_string(src_file).unwrap();
         let dst_file_text = fs::read_to_string(dst_file).unwrap();

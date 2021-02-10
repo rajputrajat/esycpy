@@ -1,6 +1,7 @@
 use crate::args::{ArgsType, Operation};
 use std::fs;
 use std::path::Path;
+use failure::Fallible;
 
 enum OperationTypes {
     FileToFile,
@@ -31,11 +32,11 @@ impl FileOp {
     pub fn process() {
     }
 
-    fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) {
+    fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) -> Fallible<()>{
         assert!(src.as_ref().exists());
         assert!(FileOp::is_dst_valid(dst.as_ref().to_str().unwrap()));
         if !dst.as_ref().parent().unwrap().exists() {
-            fs::create_dir_all(dst.as_ref().parent().unwrap()).unwrap();
+            fs::create_dir_all(dst.as_ref().parent().unwrap())?;
         }
         match self.op {
             Operation::Copy_ => {
@@ -57,6 +58,7 @@ impl FileOp {
                             dst.as_ref().to_str().unwrap()));
             }
         }
+        Ok(())
     }
 
     fn file_to_file(&self) {

@@ -7,6 +7,11 @@ use std::path::Path;
 #[derive(Debug)]
 pub struct FileOp {
     op: Operation,
+    p: Paths,
+}
+
+#[derive(Debug)]
+pub struct Paths {
     from: String,
     to: String,
 }
@@ -51,8 +56,10 @@ impl FileOp {
         match arg_paths {
             ArgsType::CmdLine { op, from, to } => Self {
                 op,
-                from: FileOp::fix_path(&from),
-                to: FileOp::fix_path(&to),
+                p: Paths {
+                    from: FileOp::fix_path(&from),
+                    to: FileOp::fix_path(&to),
+                },
             },
             _ => unreachable!(),
         }
@@ -60,7 +67,7 @@ impl FileOp {
 
     pub fn process(&self) -> Result<()> {
         trace!("processing {:?}", self);
-        match which_file_operation(&self.from) {
+        match which_file_operation(&self.p.from) {
             OperationType::FileToFile => self.file_to_file()?,
             OperationType::DirToDir => self.dir_to_dir()?,
             OperationType::AllFilesDirsToDir => self.all_files_dirs_to_dir()?,
@@ -73,7 +80,7 @@ impl FileOp {
     }
 
     fn file_to_file(&self) -> Result<()> {
-        self.file_op(&self.from, &self.to)?;
+        self.file_op(&self.p)?;
         Ok(())
     }
     fn dir_to_dir(&self) -> Result<()> {
@@ -81,7 +88,7 @@ impl FileOp {
             overwrite: true,
             ..Default::default()
         };
-        fs_extra::dir::copy(&self.from, &self.to, &copy_options)?;
+        fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
         Ok(())
     }
     fn all_files_dirs_to_dir(&self) -> Result<()> {
@@ -90,7 +97,7 @@ impl FileOp {
             content_only: true,
             ..Default::default()
         };
-        fs_extra::dir::copy(&self.from, &self.to, &copy_options)?;
+        fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
         Ok(())
     }
     fn all_specific_files_to_dir(&self) -> Result<()> {
@@ -99,27 +106,27 @@ impl FileOp {
     fn recursive_all_specific_files_to_dir(&self) -> Result<()> {
         Ok(())
     }
-    fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) -> Result<()> {
-        let s_src = src.as_ref().to_str().unwrap();
-        let s_dst = dst.as_ref().to_str().unwrap();
-        assert!(src.as_ref().exists());
-        assert!(FileOp::is_dst_valid(dst.as_ref().to_str().unwrap()));
-        if !dst.as_ref().parent().unwrap().exists() {
-            fs::create_dir_all(dst.as_ref().parent().unwrap())?;
+    fn file_op(&self, p: &Paths) -> Result<()> {
+        let src = Path::new(&p.from);
+        let dst = Path::new(&p.to);
+        assert!(src.exists());
+        assert!(FileOp::is_dst_valid(dst.to_str().unwrap()));
+        if !dst.parent().unwrap().exists() {
+            fs::create_dir_all(dst.parent().unwrap())?;
         }
         match self.op {
             Operation::Copy_ => {
                 let _ = fs::copy(&src, &dst)
-                    .unwrap_or_else(|_| panic!("couldn't copy from {} to {}", s_src, s_dst));
+                    .unwrap_or_else(|_| panic!("couldn't copy from {} to {}", p.from, p.to));
             }
             Operation::Hardlink => {
                 fs::hard_link(&src, &dst).unwrap_or_else(|_| {
-                    panic!("couldn't create hard_link, from {} to {}", s_src, s_dst)
+                    panic!("couldn't create hard_link, from {} to {}", p.from, p.to)
                 });
             }
             Operation::Move => {
                 fs::rename(&src, &dst)
-                    .unwrap_or_else(|_| panic!("couldn't move from {} to {}", s_src, s_dst));
+                    .unwrap_or_else(|_| panic!("couldn't move from {} to {}", p.from, p.to));
             }
         }
         Ok(())
@@ -171,16 +178,18 @@ mod tests {
         let src_file = src_dir.join("sample_file");
         let file_op = FileOp {
             op: Operation::Hardlink,
-            from: String::new(),
-            to: String::new(),
+            p: Paths {
+                from: String::new(),
+                to: String::new(),
+            },
         };
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(
-                src_file.to_str().unwrap().to_owned(),
-                dst_file.to_str().unwrap().to_owned(),
-            )
+            .file_op(&Paths {
+                from: src_file.to_str().unwrap().to_owned(),
+                to: dst_file.to_str().unwrap().to_owned(),
+            })
             .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());
@@ -203,15 +212,19 @@ mod tests {
         assert!(src_file.exists());
         let file_op = FileOp {
             op: Operation::Hardlink,
-            from: String::new(),
-            to: String::new(),
+            p: Paths {
+                from: String::new(),
+                to: String::new(),
+            },
         };
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
-        file_op.file_op(
-            src_file.to_str().unwrap().to_owned(),
-            dst_file.to_str().unwrap().to_owned(),
-        );
+        file_op
+            .file_op(&Paths {
+                from: src_file.to_str().unwrap().to_owned(),
+                to: dst_file.to_str().unwrap().to_owned(),
+            })
+            .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());
         let src_file_text = fs::read_to_string(src_file).unwrap();
@@ -233,15 +246,19 @@ mod tests {
         assert!(src_file.exists());
         let file_op = FileOp {
             op: Operation::Move,
-            from: String::new(),
-            to: String::new(),
+            p: Paths {
+                from: String::new(),
+                to: String::new(),
+            },
         };
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
-        file_op.file_op(
-            src_file.to_str().unwrap().to_owned(),
-            dst_file.to_str().unwrap().to_owned(),
-        );
+        file_op
+            .file_op(&Paths {
+                from: src_file.to_str().unwrap().to_owned(),
+                to: dst_file.to_str().unwrap().to_owned(),
+            })
+            .unwrap();
         assert!(!src_file.exists());
         assert!(dst_file.exists());
         let src_file_text =
@@ -264,16 +281,18 @@ mod tests {
         assert!(src_file.exists());
         let file_op = FileOp {
             op: Operation::Copy_,
-            from: String::new(),
-            to: String::new(),
+            p: Paths {
+                from: String::new(),
+                to: String::new(),
+            },
         };
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(
-                src_file.to_str().unwrap().to_owned(),
-                dst_file.to_str().unwrap().to_owned(),
-            )
+            .file_op(&Paths {
+                from: src_file.to_str().unwrap().to_owned(),
+                to: dst_file.to_str().unwrap().to_owned(),
+            })
             .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());

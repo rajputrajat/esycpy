@@ -3,7 +3,7 @@ use anyhow::Result;
 use log::trace;
 use std::fs;
 use std::path::Path;
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 #[derive(Debug)]
 pub struct FileOp {
@@ -22,8 +22,8 @@ enum OperationType {
     FileToFile,
     DirToDir,
     AllFilesDirsToDir,
-    AllSpecificFilesToDir,
-    RecursiveAllSpecificFilesToDir,
+    AllSpecificFilesToDir(String),
+    RecursiveAllSpecificFilesToDir(String),
 }
 
 fn which_file_operation(from: &str) -> OperationType {
@@ -35,12 +35,12 @@ fn which_file_operation(from: &str) -> OperationType {
         .unwrap();
     if file_name.contains('*') {
         if file_name.contains("**") {
-            OperationType::RecursiveAllSpecificFilesToDir
+            OperationType::RecursiveAllSpecificFilesToDir(file_name.to_owned())
         } else {
             if file_name == "*" {
                 OperationType::AllFilesDirsToDir
             } else {
-                OperationType::AllSpecificFilesToDir
+                OperationType::AllSpecificFilesToDir(file_name.to_owned())
             }
         }
     } else {
@@ -72,8 +72,8 @@ impl FileOp {
             OperationType::FileToFile => self.file_to_file()?,
             OperationType::DirToDir => self.dir_to_dir()?,
             OperationType::AllFilesDirsToDir => self.all_files_dirs_to_dir()?,
-            OperationType::AllSpecificFilesToDir => self.all_specific_files_to_dir()?,
-            OperationType::RecursiveAllSpecificFilesToDir => {
+            OperationType::AllSpecificFilesToDir(f) => self.all_specific_files_to_dir()?,
+            OperationType::RecursiveAllSpecificFilesToDir(f) => {
                 self.recursive_all_specific_files_to_dir()?
             }
         }
@@ -92,11 +92,19 @@ impl FileOp {
         dst
     }
 
-    fn get_src_dst_paths(p: &Paths) -> Result<Vec<Paths>> {
+    fn get_src_dst_paths<F>(p: &Paths, fname_filter: F, only_cur_dir: bool) -> Result<Vec<Paths>>
+    where
+        F: Fn(&DirEntry) -> bool,
+    {
         let mut paths: Vec<Paths> = Vec::new();
-        for file in WalkDir::new(&p.from)
+        let mut dir_walker = WalkDir::new(&p.from);
+        if only_cur_dir {
+            dir_walker = dir_walker.max_depth(1);
+        }
+        for file in dir_walker
             .into_iter()
             .filter(|f| f.as_ref().unwrap().path().is_file())
+            .filter(|f| fname_filter(f.as_ref().unwrap()))
         {
             let file = file.unwrap();
             let src = file.path();
@@ -357,11 +365,11 @@ mod tests {
         );
         assert_eq!(
             which_file_operation("./test_files/*.json"),
-            OperationType::AllSpecificFilesToDir
+            OperationType::AllSpecificFilesToDir("*.json".to_owned())
         );
         assert_eq!(
             which_file_operation("./test_files/**.json"),
-            OperationType::RecursiveAllSpecificFilesToDir
+            OperationType::RecursiveAllSpecificFilesToDir("**.json".to_owned())
         );
         assert_eq!(
             which_file_operation("./test_files/*"),
@@ -389,10 +397,14 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let s_src = "./test_files/test_src_dst_paths".to_owned();
         let s_dst = dst_dir.to_str().unwrap().to_owned();
-        let mut v_returned = FileOp::get_src_dst_paths(&Paths {
-            from: s_src.clone(),
-            to: s_dst.clone(),
-        })
+        let mut v_returned = FileOp::get_src_dst_paths(
+            &Paths {
+                from: s_src.clone(),
+                to: s_dst.clone(),
+            },
+            |_| true,
+            false,
+        )
         .unwrap();
         v_returned.sort_unstable();
         let mut v_test: Vec<Paths> = vec![

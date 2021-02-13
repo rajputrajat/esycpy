@@ -1,9 +1,18 @@
 use crate::args::{ArgsType, Operation};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use log::trace;
 use std::fs;
 use std::path::Path;
 
-enum OperationTypes {
+#[derive(Debug)]
+pub struct FileOp {
+    op: Operation,
+    from: String,
+    to: String,
+}
+
+#[derive(Debug, PartialEq)]
+enum OperationType {
     FileToFile,
     DirToDir,
     AllFilesDirsToDir,
@@ -11,10 +20,30 @@ enum OperationTypes {
     RecursiveAllSpecificFilesToDir,
 }
 
-pub struct FileOp {
-    op: Operation,
-    from: String,
-    to: String,
+fn which_file_operation(from: &str) -> OperationType {
+    let file_path = Path::new(from);
+    let file_name = file_path
+        .file_name()
+        .expect("file name must be present")
+        .to_str()
+        .unwrap();
+    if file_name.contains('*') {
+        if file_name.contains("**") {
+            OperationType::RecursiveAllSpecificFilesToDir
+        } else {
+            if file_name == "*" {
+                OperationType::AllFilesDirsToDir
+            } else {
+                OperationType::AllSpecificFilesToDir
+            }
+        }
+    } else {
+        if file_path.is_dir() {
+            OperationType::DirToDir
+        } else {
+            OperationType::FileToFile
+        }
+    }
 }
 
 impl FileOp {
@@ -29,8 +58,26 @@ impl FileOp {
         }
     }
 
-    pub fn process() {}
+    pub fn process(&self) -> Result<()> {
+        trace!("processing {:?}", self);
+        Ok(())
+    }
 
+    fn file_to_file(&self) -> Result<()> {
+        Ok(())
+    }
+    fn dir_to_dir(&self) -> Result<()> {
+        Ok(())
+    }
+    fn all_files_dirs_to_dir(&self) -> Result<()> {
+        Ok(())
+    }
+    fn all_specific_files_to_dir(&self) -> Result<()> {
+        Ok(())
+    }
+    fn recursive_all_specific_files_to_dir(&self) -> Result<()> {
+        Ok(())
+    }
     fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) -> Result<()> {
         assert!(src.as_ref().exists());
         assert!(FileOp::is_dst_valid(dst.as_ref().to_str().unwrap()));
@@ -68,8 +115,6 @@ impl FileOp {
         }
         Ok(())
     }
-
-    fn file_to_file(&self) {}
 
     fn fix_path(input: &str) -> String {
         let forward_slash = input.replace("\\", "/");
@@ -215,10 +260,12 @@ mod tests {
         };
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
-        file_op.file_op(
-            src_file.to_str().unwrap().to_owned(),
-            dst_file.to_str().unwrap().to_owned(),
-        );
+        file_op
+            .file_op(
+                src_file.to_str().unwrap().to_owned(),
+                dst_file.to_str().unwrap().to_owned(),
+            )
+            .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());
         let src_file_text = fs::read_to_string(src_file).unwrap();
@@ -241,5 +288,29 @@ mod tests {
         assert_eq!(FileOp::is_dst_valid(" c:/users/test/invalid_path"), false);
         assert_eq!(FileOp::is_dst_valid(" \\Debug\\bin"), false);
         assert_eq!(FileOp::is_dst_valid("c:\\users\\Debug\\bin"), true);
+    }
+
+    #[test]
+    fn choose_correct_file_op() {
+        assert_eq!(
+            which_file_operation("./test_files/asset_relocation_def.json"),
+            OperationType::FileToFile
+        );
+        assert_eq!(
+            which_file_operation("./test_files/for_file_operations"),
+            OperationType::DirToDir
+        );
+        assert_eq!(
+            which_file_operation("./test_files/*.json"),
+            OperationType::AllSpecificFilesToDir
+        );
+        assert_eq!(
+            which_file_operation("./test_files/**.json"),
+            OperationType::RecursiveAllSpecificFilesToDir
+        );
+        assert_eq!(
+            which_file_operation("./test_files/*"),
+            OperationType::AllFilesDirsToDir
+        );
     }
 }

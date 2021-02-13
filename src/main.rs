@@ -1,4 +1,4 @@
-use failure::Fallible;
+use anyhow::Result;
 use simplelog::*;
 use std::fs::File;
 
@@ -6,7 +6,7 @@ mod args;
 mod json_parser;
 mod operations;
 
-fn main() -> Fallible<()> {
+fn main() -> Result<()> {
     setup_logger()?;
     log_panics::init();
     let args = args::get_args();
@@ -14,7 +14,7 @@ fn main() -> Fallible<()> {
     Ok(())
 }
 
-fn setup_logger() -> Fallible<()> {
+fn setup_logger() -> Result<()> {
     CombinedLogger::init(vec![
         TermLogger::new(LevelFilter::Warn, Config::default(), TerminalMode::Mixed),
         WriteLogger::new(

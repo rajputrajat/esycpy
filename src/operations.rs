@@ -1,5 +1,5 @@
 use crate::args::{ArgsType, Operation};
-use failure::Fallible;
+use anyhow::Result;
 use std::fs;
 use std::path::Path;
 
@@ -31,7 +31,7 @@ impl FileOp {
 
     pub fn process() {}
 
-    fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) -> Fallible<()> {
+    fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) -> Result<()> {
         assert!(src.as_ref().exists());
         assert!(FileOp::is_dst_valid(dst.as_ref().to_str().unwrap()));
         if !dst.as_ref().parent().unwrap().exists() {

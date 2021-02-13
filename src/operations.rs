@@ -1,5 +1,5 @@
 use crate::args::{ArgsType, Operation};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use log::trace;
 use std::fs;
 use std::path::Path;
@@ -80,7 +80,7 @@ impl FileOp {
     }
 
     fn file_to_file(&self) -> Result<()> {
-        self.file_op(&self.p)?;
+        self.file_op(vec![&self.p])?;
         Ok(())
     }
     fn dir_to_dir(&self) -> Result<()> {
@@ -106,27 +106,22 @@ impl FileOp {
     fn recursive_all_specific_files_to_dir(&self) -> Result<()> {
         Ok(())
     }
-    fn file_op(&self, p: &Paths) -> Result<()> {
-        let src = Path::new(&p.from);
-        let dst = Path::new(&p.to);
-        assert!(src.exists());
-        assert!(FileOp::is_dst_valid(dst.to_str().unwrap()));
-        if !dst.parent().unwrap().exists() {
-            fs::create_dir_all(dst.parent().unwrap())?;
-        }
-        match self.op {
-            Operation::Copy_ => {
-                let _ = fs::copy(&src, &dst)
-                    .unwrap_or_else(|_| panic!("couldn't copy from {} to {}", p.from, p.to));
+    fn file_op(&self, vp: Vec<&Paths>) -> Result<()> {
+        for p in vp {
+            trace!("{:?}", p);
+            let src = Path::new(&p.from);
+            let dst = Path::new(&p.to);
+            assert!(src.exists());
+            assert!(FileOp::is_dst_valid(dst.to_str().unwrap()));
+            if !dst.parent().unwrap().exists() {
+                fs::create_dir_all(dst.parent().unwrap())?;
             }
-            Operation::Hardlink => {
-                fs::hard_link(&src, &dst).unwrap_or_else(|_| {
-                    panic!("couldn't create hard_link, from {} to {}", p.from, p.to)
-                });
-            }
-            Operation::Move => {
-                fs::rename(&src, &dst)
-                    .unwrap_or_else(|_| panic!("couldn't move from {} to {}", p.from, p.to));
+            match self.op {
+                Operation::Copy_ => {
+                    let _ = fs::copy(&src, &dst)?;
+                }
+                Operation::Hardlink => fs::hard_link(&src, &dst)?,
+                Operation::Move => fs::rename(&src, &dst)?,
             }
         }
         Ok(())
@@ -186,10 +181,10 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(&Paths {
+            .file_op(vec![&Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
-            })
+            }])
             .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());
@@ -220,10 +215,10 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(&Paths {
+            .file_op(vec![&Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
-            })
+            }])
             .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());
@@ -254,10 +249,10 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(&Paths {
+            .file_op(vec![&Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
-            })
+            }])
             .unwrap();
         assert!(!src_file.exists());
         assert!(dst_file.exists());
@@ -289,10 +284,10 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(&Paths {
+            .file_op(vec![&Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
-            })
+            }])
             .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());

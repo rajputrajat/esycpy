@@ -3,6 +3,7 @@ use anyhow::Result;
 use log::trace;
 use std::fs;
 use std::path::Path;
+use walkdir::WalkDir;
 
 #[derive(Debug)]
 pub struct FileOp {
@@ -10,7 +11,7 @@ pub struct FileOp {
     p: Paths,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Paths {
     from: String,
     to: String,
@@ -80,15 +81,46 @@ impl FileOp {
     }
 
     fn file_to_file(&self) -> Result<()> {
-        self.file_op(vec![&self.p])?;
+        self.file_op(&vec![self.p.clone()])?;
         Ok(())
     }
+
+    fn fix_offset(p: &Paths, new_src: &str) -> String {
+        let offset = new_src.replace(&p.from, "");
+        let mut dst = String::from(&p.to);
+        dst.push_str(&offset);
+        dst
+    }
+
+    fn get_src_dst_paths(p: &Paths) -> Vec<Paths> {
+        let mut paths: Vec<Paths> = Vec::new();
+        for file in WalkDir::new(&p.from)
+            .into_iter()
+            .filter_entry(|f| f.path().is_file())
+        {
+            let file = file.unwrap();
+            let src = file.path();
+            let dst = FileOp::fix_offset(p, src.to_str().unwrap());
+            paths.push(Paths {
+                from: src.to_str().unwrap().to_owned(),
+                to: dst,
+            })
+        }
+        paths
+    }
+
     fn dir_to_dir(&self) -> Result<()> {
-        let copy_options = fs_extra::dir::CopyOptions {
-            overwrite: true,
-            ..Default::default()
-        };
-        fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
+        match self.op {
+            Operation::Copy_ => {
+                let copy_options = fs_extra::dir::CopyOptions {
+                    overwrite: true,
+                    ..Default::default()
+                };
+                fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
+            }
+            Operation::Move => self.file_op(&vec![self.p.clone()])?,
+            Operation::Hardlink => {}
+        }
         Ok(())
     }
     fn all_files_dirs_to_dir(&self) -> Result<()> {
@@ -106,7 +138,7 @@ impl FileOp {
     fn recursive_all_specific_files_to_dir(&self) -> Result<()> {
         Ok(())
     }
-    fn file_op(&self, vp: Vec<&Paths>) -> Result<()> {
+    fn file_op(&self, vp: &Vec<Paths>) -> Result<()> {
         for p in vp {
             trace!("{:?}", p);
             let src = Path::new(&p.from);
@@ -181,7 +213,7 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(vec![&Paths {
+            .file_op(&vec![Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
             }])
@@ -215,7 +247,7 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(vec![&Paths {
+            .file_op(&vec![Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
             }])
@@ -249,7 +281,7 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(vec![&Paths {
+            .file_op(&vec![Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
             }])
@@ -284,7 +316,7 @@ mod tests {
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
         file_op
-            .file_op(vec![&Paths {
+            .file_op(&vec![Paths {
                 from: src_file.to_str().unwrap().to_owned(),
                 to: dst_file.to_str().unwrap().to_owned(),
             }])
@@ -334,6 +366,20 @@ mod tests {
         assert_eq!(
             which_file_operation("./test_files/*"),
             OperationType::AllFilesDirsToDir
+        );
+    }
+
+    #[test]
+    fn check_fix_offset() {
+        assert_eq!(
+            FileOp::fix_offset(
+                &Paths {
+                    from: "c:/Users/test/dir1".to_owned(),
+                    to: "c:/Users/test/dir2".to_owned()
+                },
+                "c:/Users/test/dir1/dir3/dir4/a_file"
+            ),
+            "c:/Users/test/dir2/dir3/dir4/a_file"
         );
     }
 }

@@ -60,16 +60,35 @@ impl FileOp {
 
     pub fn process(&self) -> Result<()> {
         trace!("processing {:?}", self);
+        match which_file_operation(&self.from) {
+            OperationType::FileToFile => self.file_to_file()?,
+            OperationType::DirToDir => self.dir_to_dir()?,
+            OperationType::AllFilesDirsToDir => self.all_files_dirs_to_dir()?,
+            OperationType::AllSpecificFilesToDir => self.all_specific_files_to_dir()?,
+            OperationType::RecursiveAllSpecificFilesToDir => {
+                self.recursive_all_specific_files_to_dir()?
+            }
+        }
         Ok(())
     }
 
     fn file_to_file(&self) -> Result<()> {
+        self.file_op(&self.from, &self.to)?;
         Ok(())
     }
     fn dir_to_dir(&self) -> Result<()> {
+        let copy_options = fs_extra::dir::CopyOptions {
+            overwrite: true,
+            ..Default::default()
+        };
+        fs_extra::dir::copy(&self.from, &self.to, &copy_options)?;
         Ok(())
     }
     fn all_files_dirs_to_dir(&self) -> Result<()> {
+        let copy_options = fs_extra::dir::CopyOptions {
+            ..Default::default()
+        };
+        fs_extra::dir::copy(&self.from, &self.to, &copy_options)?;
         Ok(())
     }
     fn all_specific_files_to_dir(&self) -> Result<()> {

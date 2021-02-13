@@ -11,7 +11,7 @@ pub struct FileOp {
     p: Paths,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Paths {
     from: String,
     to: String,
@@ -92,11 +92,11 @@ impl FileOp {
         dst
     }
 
-    fn get_src_dst_paths(p: &Paths) -> Vec<Paths> {
+    fn get_src_dst_paths(p: &Paths) -> Result<Vec<Paths>> {
         let mut paths: Vec<Paths> = Vec::new();
         for file in WalkDir::new(&p.from)
             .into_iter()
-            .filter_entry(|f| f.path().is_file())
+            .filter(|f| f.as_ref().unwrap().path().is_file())
         {
             let file = file.unwrap();
             let src = file.path();
@@ -106,7 +106,7 @@ impl FileOp {
                 to: dst,
             })
         }
-        paths
+        Ok(paths)
     }
 
     fn dir_to_dir(&self) -> Result<()> {
@@ -381,5 +381,39 @@ mod tests {
             ),
             "c:/Users/test/dir2/dir3/dir4/a_file"
         );
+    }
+
+    #[test]
+    fn check_get_src_dst_paths() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dst_dir = tmp_dir.path().join("dst");
+        let s_src = "./test_files/test_src_dst_paths".to_owned();
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let mut v_returned = FileOp::get_src_dst_paths(&Paths {
+            from: s_src.clone(),
+            to: s_dst.clone(),
+        })
+        .unwrap();
+        v_returned.sort_unstable();
+        let mut v_test: Vec<Paths> = vec![
+            Paths {
+                from: format!("{}\\f1", s_src),
+                to: format!("{}\\f1", s_dst),
+            },
+            Paths {
+                from: format!("{}\\d1\\f11", s_src),
+                to: format!("{}\\d1\\f11", s_dst),
+            },
+            Paths {
+                from: format!("{}\\d1\\d12\\f12", s_src),
+                to: format!("{}\\d1\\d12\\f12", s_dst),
+            },
+            Paths {
+                from: format!("{}\\d3\\f3", s_src),
+                to: format!("{}\\d3\\f3", s_dst),
+            },
+        ];
+        v_test.sort_unstable();
+        assert_eq!(v_returned, v_test);
     }
 }

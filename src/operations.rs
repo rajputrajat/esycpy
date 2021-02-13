@@ -86,6 +86,8 @@ impl FileOp {
     }
     fn all_files_dirs_to_dir(&self) -> Result<()> {
         let copy_options = fs_extra::dir::CopyOptions {
+            overwrite: true,
+            content_only: true,
             ..Default::default()
         };
         fs_extra::dir::copy(&self.from, &self.to, &copy_options)?;
@@ -98,6 +100,8 @@ impl FileOp {
         Ok(())
     }
     fn file_op<P: AsRef<Path>>(&self, src: P, dst: P) -> Result<()> {
+        let s_src = src.as_ref().to_str().unwrap();
+        let s_dst = dst.as_ref().to_str().unwrap();
         assert!(src.as_ref().exists());
         assert!(FileOp::is_dst_valid(dst.as_ref().to_str().unwrap()));
         if !dst.as_ref().parent().unwrap().exists() {
@@ -105,31 +109,17 @@ impl FileOp {
         }
         match self.op {
             Operation::Copy_ => {
-                let _ = fs::copy(src.as_ref(), dst.as_ref()).unwrap_or_else(|_| {
-                    panic!(
-                        "couldn't copy from {} to {}",
-                        src.as_ref().to_str().unwrap(),
-                        dst.as_ref().to_str().unwrap()
-                    )
-                });
+                let _ = fs::copy(&src, &dst)
+                    .unwrap_or_else(|_| panic!("couldn't copy from {} to {}", s_src, s_dst));
             }
             Operation::Hardlink => {
-                fs::hard_link(src.as_ref(), dst.as_ref()).unwrap_or_else(|_| {
-                    panic!(
-                        "couldn't create hard_link, from {} to {}",
-                        src.as_ref().to_str().unwrap(),
-                        dst.as_ref().to_str().unwrap()
-                    )
+                fs::hard_link(&src, &dst).unwrap_or_else(|_| {
+                    panic!("couldn't create hard_link, from {} to {}", s_src, s_dst)
                 });
             }
             Operation::Move => {
-                fs::rename(src.as_ref(), dst.as_ref()).unwrap_or_else(|_| {
-                    panic!(
-                        "couldn't move from {} to {}",
-                        src.as_ref().to_str().unwrap(),
-                        dst.as_ref().to_str().unwrap()
-                    )
-                });
+                fs::rename(&src, &dst)
+                    .unwrap_or_else(|_| panic!("couldn't move from {} to {}", s_src, s_dst));
             }
         }
         Ok(())

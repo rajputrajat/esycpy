@@ -1,6 +1,6 @@
+use failure::Fallible;
 use simplelog::*;
 use std::fs::File;
-use failure::Fallible;
 
 mod args;
 mod json_parser;
@@ -25,4 +25,3 @@ fn setup_logger() -> Fallible<()> {
     ])?;
     Ok(())
 }
-

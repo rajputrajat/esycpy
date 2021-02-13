@@ -19,8 +19,8 @@ pub fn get_json_args(args: ArgsType) -> Vec<ArgsType> {
 
 fn map_variables(
     asset_def: AssetRelocationDef,
-    variables: Option<Vec<(String, String)>>) -> Vec<ArgsType>
-{
+    variables: Option<Vec<(String, String)>>,
+) -> Vec<ArgsType> {
     assert_eq!(
         variables.is_none(),
         asset_def.variables_in_use.len() == 0,
@@ -39,7 +39,7 @@ fn map_variables(
             "copy" => Operation::Copy_,
             "move" => Operation::Move,
             "hardlink" => Operation::Hardlink,
-            _ => panic!("unhandled operation")
+            _ => panic!("unhandled operation"),
         };
         if let Some(variables) = variables.clone() {
             variables.iter().for_each(|v| {
@@ -50,7 +50,7 @@ fn map_variables(
         let mapped_arg = ArgsType::CmdLine {
             op: todo,
             from: d.src,
-            to: d.dst
+            to: d.dst,
         };
         mapped_args.push(mapped_arg)
     });
@@ -89,7 +89,7 @@ mod tests {
                 "var1".to_owned(),
                 "var2".to_owned(),
                 "var3".to_owned(),
-                "var4".to_owned()
+                "var4".to_owned(),
             ],
             jobs: vec![
                 JobConfigs {
@@ -106,14 +106,14 @@ mod tests {
                     todo: "move".to_owned(),
                     src: "this/is/var2/yes".to_owned(),
                     dst: "this/is/var3/yes".to_owned(),
-                }
-            ]
+                },
+            ],
         };
         let variables = Some(vec![
             ("var1".to_owned(), "VAR1".to_owned()),
             ("var2".to_owned(), "VAR2".to_owned()),
             ("var3".to_owned(), "VAR3".to_owned()),
-            ("var4".to_owned(), "VAR4".to_owned())
+            ("var4".to_owned(), "VAR4".to_owned()),
         ]);
         let mut ops = vec![Operation::Move, Operation::Hardlink, Operation::Copy_];
         let mut arg_types: Vec<ArgsType> = Vec::new();
@@ -121,7 +121,7 @@ mod tests {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
                 to: d.dst.replace("var", "VAR"),
-                from: d.src.replace("var", "VAR")
+                from: d.src.replace("var", "VAR"),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -130,8 +130,7 @@ mod tests {
     #[test]
     fn no_vars() {
         let asset_def = AssetRelocationDef {
-            variables_in_use: vec![
-            ],
+            variables_in_use: vec![],
             jobs: vec![
                 JobConfigs {
                     todo: "copy".to_owned(),
@@ -147,8 +146,8 @@ mod tests {
                     todo: "move".to_owned(),
                     src: "this/is/var2/yes".to_owned(),
                     dst: "this/is/var3/yes".to_owned(),
-                }
-            ]
+                },
+            ],
         };
         let variables = None;
         let mut ops = vec![Operation::Move, Operation::Hardlink, Operation::Copy_];
@@ -157,7 +156,7 @@ mod tests {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
                 to: d.dst.clone(),
-                from: d.src.clone()
+                from: d.src.clone(),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -167,15 +166,12 @@ mod tests {
     #[should_panic(expected = "either json file is missing vars, or command line")]
     fn incompatible_vars() {
         let asset_def = AssetRelocationDef {
-            variables_in_use: vec![
-            ],
-            jobs: vec![
-                JobConfigs {
-                    todo: "copy".to_owned(),
-                    src: "this/is/var1/yes".to_owned(),
-                    dst: "this/is/var2/yes".to_owned(),
-                },
-            ]
+            variables_in_use: vec![],
+            jobs: vec![JobConfigs {
+                todo: "copy".to_owned(),
+                src: "this/is/var1/yes".to_owned(),
+                dst: "this/is/var2/yes".to_owned(),
+            }],
         };
         let variables = Some(vec![
             ("var1".to_owned(), "VAR1".to_owned()),
@@ -187,7 +183,7 @@ mod tests {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
                 to: d.dst.clone(),
-                from: d.src.clone()
+                from: d.src.clone(),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -197,28 +193,21 @@ mod tests {
     #[should_panic(expected = "vars count mismatch")]
     fn vars_count_mismatch() {
         let asset_def = AssetRelocationDef {
-            variables_in_use: vec![
-                "var1".to_owned(),
-                "var2".to_owned(),
-            ],
-            jobs: vec![
-                JobConfigs {
-                    todo: "move".to_owned(),
-                    src: "this/is/var2/yes".to_owned(),
-                    dst: "this/is/var3/yes".to_owned(),
-                }
-            ]
+            variables_in_use: vec!["var1".to_owned(), "var2".to_owned()],
+            jobs: vec![JobConfigs {
+                todo: "move".to_owned(),
+                src: "this/is/var2/yes".to_owned(),
+                dst: "this/is/var3/yes".to_owned(),
+            }],
         };
-        let variables = Some(vec![
-            ("var1".to_owned(), "VAR1".to_owned()),
-        ]);
+        let variables = Some(vec![("var1".to_owned(), "VAR1".to_owned())]);
         let mut ops = vec![Operation::Move];
         let mut arg_types: Vec<ArgsType> = Vec::new();
         asset_def.jobs.iter().for_each(|d| {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
                 to: d.dst.replace("var", "VAR"),
-                from: d.src.replace("var", "VAR")
+                from: d.src.replace("var", "VAR"),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -231,22 +220,31 @@ mod tests {
             variables: Some(vec![
                 (String::from("{Configuration}"), String::from("debug")),
                 (String::from("{ProjectName}"), String::from("test_proj")),
-                (String::from("{ProjectDir}"), String::from("c:/Users/test/proj_dir")),
-                (String::from("{SolutionDir}"), String::from("c:/Users/test/sol_dir")),
-                (String::from("{OutDir}"), String::from("c:/Users/test/out_dir")),
-            ])
+                (
+                    String::from("{ProjectDir}"),
+                    String::from("c:/Users/test/proj_dir"),
+                ),
+                (
+                    String::from("{SolutionDir}"),
+                    String::from("c:/Users/test/sol_dir"),
+                ),
+                (
+                    String::from("{OutDir}"),
+                    String::from("c:/Users/test/out_dir"),
+                ),
+            ]),
         };
         let out_args = vec![
             ArgsType::CmdLine {
                 op: Operation::Hardlink,
                 from: String::from("c:/Users/test/sol_dir/../Bink2/lib/*.dll"),
-                to: String::from("c:/Users/test/out_dir")
+                to: String::from("c:/Users/test/out_dir"),
             },
             ArgsType::CmdLine {
                 op: Operation::Move,
                 from: String::from("c:/Users/test/proj_dir/assets"),
-                to: String::from("c:/Users/test/out_dir/debug/Games/test_proj")
-            }
+                to: String::from("c:/Users/test/out_dir/debug/Games/test_proj"),
+            },
         ];
         assert_eq!(out_args, get_json_args(input_json_args));
     }

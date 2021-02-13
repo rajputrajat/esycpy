@@ -1,11 +1,11 @@
-use clap::{Arg, App, SubCommand};
-use std::path::{PathBuf, Path};
+use clap::{App, Arg, SubCommand};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, PartialEq)]
 pub enum Operation {
     Copy_,
     Move,
-    Hardlink
+    Hardlink,
 }
 
 #[derive(Debug, PartialEq)]
@@ -17,8 +17,8 @@ pub enum ArgsType {
     },
     Json {
         json_file: PathBuf,
-        variables: Option<Vec<(String, String)>>
-    }
+        variables: Option<Vec<(String, String)>>,
+    },
 }
 
 pub fn get_args() -> ArgsType {
@@ -39,63 +39,72 @@ pub fn get_args() -> ArgsType {
         .author("Rajat Rajput <rajputrajat@gmail.com")
         .about("copy, move files and create hardlinks with ease.")
         .help(HELP)
-        .subcommand(SubCommand::with_name("copy")
-            .about("copy file/dir from source to destination")
-            .arg(arg_from.clone())
-            .arg(arg_to.clone()))
-        .subcommand(SubCommand::with_name("move")
-            .about("move file/dir from source to destination")
-            .arg(arg_from.clone())
-            .arg(arg_to.clone()))
-        .subcommand(SubCommand::with_name("hardlink")
-            .about( "create hardlinks of file/s from source to destination")
-            .arg(arg_from)
-            .arg(arg_to))
-        .arg(Arg::with_name("json_file")
-            .short("j")
-            .long("json")
-            .takes_value(true)
-            .validator(|p| -> Result<(), String> {
-                let jfile = Path::new(p.as_str()).canonicalize();
-                if jfile.is_ok() {
-                    Ok(())
-                } else {
-                    Err(String::from("json file path isn't correct."))
-                }
-            })
-            .value_name("JSON_FILE_PATH"))
-        .arg(Arg::with_name("variables")
-            .short("v")
-            .long("variables")
-            .requires("json_file")
-            .min_values(1)
-            .validator(|v| -> Result<(), String> {
-                if v.contains("=") {
-                    Ok(())
-                } else {
-                    Err(String::from("assignment operator not found. check help."))
-                }
-            })
-            .value_name("VARIABLE_NAME_VALUE_PAIR"))
+        .subcommand(
+            SubCommand::with_name("copy")
+                .about("copy file/dir from source to destination")
+                .arg(arg_from.clone())
+                .arg(arg_to.clone()),
+        )
+        .subcommand(
+            SubCommand::with_name("move")
+                .about("move file/dir from source to destination")
+                .arg(arg_from.clone())
+                .arg(arg_to.clone()),
+        )
+        .subcommand(
+            SubCommand::with_name("hardlink")
+                .about("create hardlinks of file/s from source to destination")
+                .arg(arg_from)
+                .arg(arg_to),
+        )
+        .arg(
+            Arg::with_name("json_file")
+                .short("j")
+                .long("json")
+                .takes_value(true)
+                .validator(|p| -> Result<(), String> {
+                    let jfile = Path::new(p.as_str()).canonicalize();
+                    if jfile.is_ok() {
+                        Ok(())
+                    } else {
+                        Err(String::from("json file path isn't correct."))
+                    }
+                })
+                .value_name("JSON_FILE_PATH"),
+        )
+        .arg(
+            Arg::with_name("variables")
+                .short("v")
+                .long("variables")
+                .requires("json_file")
+                .min_values(1)
+                .validator(|v| -> Result<(), String> {
+                    if v.contains("=") {
+                        Ok(())
+                    } else {
+                        Err(String::from("assignment operator not found. check help."))
+                    }
+                })
+                .value_name("VARIABLE_NAME_VALUE_PAIR"),
+        )
         .get_matches();
     let json_file_path = matches.value_of("json_file");
     if let Some(json_file_path) = json_file_path {
         let json_file = Path::new(json_file_path).to_owned();
         if let Some(variables) = matches.values_of("variables") {
-            let variables = variables
-                .fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
-                    let name_value: Vec<&str> = (*v).split('=').collect();
-                    vec.push((String::from(name_value[0]), String::from(name_value[1])));
-                    vec
+            let variables = variables.fold(Vec::new(), |mut vec: Vec<(String, String)>, v| {
+                let name_value: Vec<&str> = (*v).split('=').collect();
+                vec.push((String::from(name_value[0]), String::from(name_value[1])));
+                vec
             });
-            ArgsType::Json{
+            ArgsType::Json {
                 json_file,
-                variables: Some(variables)
+                variables: Some(variables),
             }
         } else {
-            ArgsType::Json{
+            ArgsType::Json {
                 json_file,
-                variables: None
+                variables: None,
             }
         }
     } else {
@@ -103,7 +112,7 @@ pub fn get_args() -> ArgsType {
             Some("copy") => ("copy", Operation::Copy_),
             Some("move") => ("move", Operation::Move),
             Some("hardlink") => ("hardlink", Operation::Hardlink),
-            _ => panic!("incorrect subcommand. use help command")
+            _ => panic!("incorrect subcommand. use help command"),
         };
         if let Some(subcommand_matches) = matches.subcommand_matches(subcommand.0) {
             let source = subcommand_matches.value_of("from").unwrap();
@@ -111,7 +120,7 @@ pub fn get_args() -> ArgsType {
             ArgsType::CmdLine {
                 op: subcommand.1,
                 from: source.to_owned(),
-                to: destination.to_owned()
+                to: destination.to_owned(),
             }
         } else {
             panic!("neither json option is provided, nor cmdline option is used. use help command");

@@ -22,8 +22,8 @@ impl FileOp {
         match arg_paths {
             ArgsType::CmdLine { op, from, to } => Self {
                 op,
-                from: FileOp::fix_path(from.as_str()),
-                to: FileOp::fix_path(to.as_str()),
+                from: FileOp::fix_path(&from),
+                to: FileOp::fix_path(&to),
             },
             _ => unreachable!(),
         }
@@ -122,10 +122,12 @@ mod tests {
         };
         let dst_dir = tmp_dir.path().join("dst");
         let dst_file = dst_dir.join("sample_file");
-        file_op.file_op(
-            src_file.to_str().unwrap().to_owned(),
-            dst_file.to_str().unwrap().to_owned(),
-        );
+        file_op
+            .file_op(
+                src_file.to_str().unwrap().to_owned(),
+                dst_file.to_str().unwrap().to_owned(),
+            )
+            .unwrap();
         assert!(src_file.exists());
         assert!(dst_file.exists());
         let src_file_text = fs::read_to_string(src_file).unwrap();

@@ -30,7 +30,7 @@ impl Default for FileOp {
         Self {
             op: None,
             f_type: None,
-            ..Default::default()
+            p: Paths::default()
         }
     }
 }
@@ -374,7 +374,6 @@ mod tests {
     }
 
     #[test]
-    //#[ignore]
     fn check_get_src_dst_paths() {
         println!("reached here");
         let tmp_dir = TempDir::new().unwrap();
@@ -415,10 +414,45 @@ mod tests {
     }
 
     #[test]
-    fn check_paths_of_only_cur_dir() {
+    fn check_paths_specific_file_only_cur_dir() {
         let tmp_dir = TempDir::new().unwrap();
         let dst_dir = tmp_dir.path().join("dst");
         let s_src = "./test_files/test_src_dst_paths/*.file".to_owned();
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Move,
+            from: s_src.clone(),
+            to: s_dst.clone(),
+        });
+        println!("{:?}", file_op);
+        let mut v_returned = file_op
+            .get_src_dst_paths(
+                |f| {
+                    let ext = f.file_name().to_str().unwrap().rsplit(|c| c == '.').next().unwrap();
+                    ext == "file"
+                },
+                true,
+            )
+            .unwrap();
+        fix_path_vec(&mut v_returned);
+        v_returned.sort_unstable();
+        let parent = |s: &str| Path::new(s).parent().unwrap().to_str().unwrap().to_owned();
+        let mut v_test: Vec<Paths> = vec![
+            Paths {
+                from: format!("{}\\f1.file", parent(&s_src)),
+                to: format!("{}\\f1.file", s_dst),
+            },
+        ];
+        fix_path_vec(&mut v_test);
+        v_test.sort_unstable();
+        assert_eq!(v_returned, v_test);
+    }
+
+    #[test]
+    fn check_paths_recursive_specific_file_type() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dst_dir = tmp_dir.path().join("dst");
+        let s_src = "./test_files/test_src_dst_paths/**.file".to_owned();
         let s_dst = dst_dir.to_str().unwrap().to_owned();
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Move,
@@ -455,6 +489,11 @@ mod tests {
         fix_path_vec(&mut v_test);
         v_test.sort_unstable();
         assert_eq!(v_returned, v_test);
+    }
+
+    #[test]
+    fn files_from_only_this_dir() {
+
     }
 
     fn fix_path_vec(v: &mut Vec<Paths>) {

@@ -216,7 +216,6 @@ mod tests {
 
     #[test]
     #[should_panic]
-    #[ignore]
     fn check_ops_hardlink_file_err() {
         let tmp_dir = TempDir::new().unwrap();
         let src_dir = tmp_dir.path().join("src");
@@ -246,7 +245,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn check_ops_hardlink_file() {
         let tmp_dir = TempDir::new().unwrap();
         let src_dir = tmp_dir.path().join("src");
@@ -282,7 +280,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn check_ops_move_file() {
         let tmp_dir = TempDir::new().unwrap();
         let src_dir = tmp_dir.path().join("src");
@@ -319,7 +316,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn check_ops_copy_file() {
         let tmp_dir = TempDir::new().unwrap();
         let src_dir = tmp_dir.path().join("src");

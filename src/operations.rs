@@ -1,6 +1,7 @@
 use crate::args::{ArgsType, Operation};
 use anyhow::Result;
 use log::trace;
+use regex::Regex;
 use std::fs;
 use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
@@ -30,14 +31,12 @@ impl Default for FileOp {
         Self {
             op: None,
             f_type: None,
-            p: Paths::default()
+            p: Paths::default(),
         }
     }
 }
 
 impl FileOp {
-    fn update_src_and_file_type(&mut self) {}
-
     pub fn from(arg_paths: ArgsType) -> Self {
         let file_op = match arg_paths {
             ArgsType::CmdLine { op, from, to } => {
@@ -73,11 +72,54 @@ impl FileOp {
 
     pub fn process(&self) -> Result<()> {
         trace!("processing {:?}", self);
+        match &self.f_type {
+            Some(FileType::File) => self.file_op(&vec![self.p.clone()])?,
+            Some(FileType::Dir) => self.dir_to_dir()?,
+            Some(FileType::Filter(file_name)) => {
+                let mut only_cur_dir = false;
+                if file_name.contains("**") {
+                    only_cur_dir = true;
+                }
+                let ext = FileOp::get_ext(file_name)?;
+                let filter = |f: &DirEntry| -> bool {
+                    if ext == "" {
+                        true
+                    } else if f.file_name().to_str().unwrap().contains(&ext) {
+                        true
+                    } else {
+                        false
+                    }
+                };
+                let v_paths = self.get_src_dst_paths(filter, only_cur_dir)?;
+                self.file_op(&v_paths)?;
+            }
+            None => unreachable!(),
+        }
         Ok(())
     }
 
-    fn file_to_file(&self) -> Result<()> {
-        self.file_op(&vec![self.p.clone()])?;
+    fn get_ext(file_name: &str) -> Result<String> {
+        let re = Regex::new(r"\**(.*)$")?;
+        let cap = re.captures(file_name).unwrap();
+        Ok(cap[1].to_owned())
+    }
+
+    fn dir_to_dir(&self) -> Result<()> {
+        match self.op {
+            Some(Operation::Copy_) => {
+                let copy_options = fs_extra::dir::CopyOptions {
+                    overwrite: true,
+                    ..Default::default()
+                };
+                fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
+            }
+            Some(Operation::Move) => self.file_op(&vec![self.p.clone()])?,
+            Some(Operation::Hardlink) => {
+                let v_paths = self.get_src_dst_paths(|f| f.path().is_file(), false)?;
+                self.file_op(&v_paths)?;
+            }
+            None => unreachable!(),
+        }
         Ok(())
     }
 
@@ -113,36 +155,6 @@ impl FileOp {
         Ok(paths)
     }
 
-    fn dir_to_dir(&self) -> Result<()> {
-        match self.op {
-            Some(Operation::Copy_) => {
-                let copy_options = fs_extra::dir::CopyOptions {
-                    overwrite: true,
-                    ..Default::default()
-                };
-                fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
-            }
-            Some(Operation::Move) => self.file_op(&vec![self.p.clone()])?,
-            Some(Operation::Hardlink) => {}
-            None => unreachable!(),
-        }
-        Ok(())
-    }
-    fn all_files_dirs_to_dir(&self) -> Result<()> {
-        let copy_options = fs_extra::dir::CopyOptions {
-            overwrite: true,
-            content_only: true,
-            ..Default::default()
-        };
-        fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
-        Ok(())
-    }
-    fn all_specific_files_to_dir(&self) -> Result<()> {
-        Ok(())
-    }
-    fn recursive_all_specific_files_to_dir(&self) -> Result<()> {
-        Ok(())
-    }
     fn file_op(&self, vp: &Vec<Paths>) -> Result<()> {
         for p in vp {
             trace!("{:?}", p);
@@ -428,7 +440,13 @@ mod tests {
         let mut v_returned = file_op
             .get_src_dst_paths(
                 |f| {
-                    let ext = f.file_name().to_str().unwrap().rsplit(|c| c == '.').next().unwrap();
+                    let ext = f
+                        .file_name()
+                        .to_str()
+                        .unwrap()
+                        .rsplit(|c| c == '.')
+                        .next()
+                        .unwrap();
                     ext == "file"
                 },
                 true,
@@ -437,12 +455,10 @@ mod tests {
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
         let parent = |s: &str| Path::new(s).parent().unwrap().to_str().unwrap().to_owned();
-        let mut v_test: Vec<Paths> = vec![
-            Paths {
-                from: format!("{}\\f1.file", parent(&s_src)),
-                to: format!("{}\\f1.file", s_dst),
-            },
-        ];
+        let mut v_test: Vec<Paths> = vec![Paths {
+            from: format!("{}\\f1.file", parent(&s_src)),
+            to: format!("{}\\f1.file", s_dst),
+        }];
         fix_path_vec(&mut v_test);
         v_test.sort_unstable();
         assert_eq!(v_returned, v_test);
@@ -463,7 +479,13 @@ mod tests {
         let mut v_returned = file_op
             .get_src_dst_paths(
                 |f| {
-                    let ext = f.file_name().to_str().unwrap().rsplit(|c| c == '.').next().unwrap();
+                    let ext = f
+                        .file_name()
+                        .to_str()
+                        .unwrap()
+                        .rsplit(|c| c == '.')
+                        .next()
+                        .unwrap();
                     ext == "file"
                 },
                 false,
@@ -492,9 +514,16 @@ mod tests {
     }
 
     #[test]
-    fn files_from_only_this_dir() {
-
+    fn get_ext_() {
+        assert_eq!(FileOp::get_ext("*").unwrap(), "");
+        assert_eq!(FileOp::get_ext("*.txt").unwrap(), ".txt");
+        assert_eq!(FileOp::get_ext("**.file").unwrap(), ".file");
+        assert_eq!(FileOp::get_ext("**").unwrap(), "");
+        assert_eq!(FileOp::get_ext("**suffix").unwrap(), "suffix");
     }
+
+    #[test]
+    fn files_from_only_this_dir() {}
 
     fn fix_path_vec(v: &mut Vec<Paths>) {
         for p in v {

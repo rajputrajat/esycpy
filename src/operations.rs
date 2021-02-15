@@ -167,7 +167,7 @@ impl FileOp {
 
     fn fix_path(input: &str) -> String {
         let forward_slash = input.replace("\\", "/");
-        println!("{}", forward_slash.clone());
+        trace!("{}", forward_slash.clone());
         let mut only_one_slash = String::new();
         let mut prev_char: Option<char> = None;
         forward_slash.chars().for_each(|c| {
@@ -429,25 +429,26 @@ mod tests {
         let mut v_returned = file_op
             .get_src_dst_paths(
                 |f| {
-                    let f_name = &f.file_name().to_str().unwrap()[2..];
-                    f_name == "file"
+                    let ext = f.file_name().to_str().unwrap().rsplit(|c| c == '.').next().unwrap();
+                    ext == "file"
                 },
                 false,
             )
             .unwrap();
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
+        let parent = |s: &str| Path::new(s).parent().unwrap().to_str().unwrap().to_owned();
         let mut v_test: Vec<Paths> = vec![
             Paths {
-                from: format!("{}\\f1.file", s_src),
+                from: format!("{}\\f1.file", parent(&s_src)),
                 to: format!("{}\\f1.file", s_dst),
             },
             Paths {
-                from: format!("{}\\d1\\f11.file", s_src),
+                from: format!("{}\\d1\\f11.file", parent(&s_src)),
                 to: format!("{}\\d1\\f11.file", s_dst),
             },
             Paths {
-                from: format!("{}\\d1\\d12\\f12.file", s_src),
+                from: format!("{}\\d1\\d12\\f12.file", parent(&s_src)),
                 to: format!("{}\\d1\\d12\\f12.file", s_dst),
             },
         ];

@@ -614,23 +614,17 @@ mod tests {
             to: s_dst.clone(),
         });
         file_op.process().unwrap();
-        let get_paths = |s: &Path| -> Vec<String> {
-            WalkDir::new(s)
+        let v_src: Vec<String> = WalkDir::new(src)
             .into_iter()
             .map(|f| f.unwrap().path().to_str().unwrap().to_owned())
-            .collect()
-            };
-        let mut v_src = get_paths(&src);
-        v_src.sort_unstable();
-        let v_dst = get_paths(Path::new(&s_dst));
-        let mut v_dst_transformed: Vec<String> = v_dst
-            .iter()
-            .fold(Vec::new(), |mut v, f| {
-                v.push(f.replace("\\dst", "\\src"));
-                v
-            });
-        v_dst_transformed.sort_unstable();
-        assert_eq!(v_src, v_dst_transformed);
+            .collect();
+        let _v_dst = WalkDir::new(s_dst)
+            .into_iter()
+            .for_each(|f|
+        {
+            let dst = f.unwrap().path().to_str().unwrap().to_owned();
+            assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
+        });
     }
 }
 

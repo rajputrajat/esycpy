@@ -185,6 +185,33 @@ fn json_arg() -> Result<()> {
         .join("dst_d21")
         .join("f211.ext1")
         .exists());
-    assert!(src.exists());
+
+    assert!(dst.join("dst_v5").join("dst_d2").join("f21.ext1").exists());
+    assert!(dst.join("dst_v5").join("dst_d2").join("f22.ext1").exists());
+    assert!(dst.join("dst_v5").join("dst_d2").join("f23.ext1").exists());
+    assert!(!src.join("d2").join("f21.ext1").exists());
+    assert!(!src.join("d2").join("f22.ext1").exists());
+    assert!(!src.join("d2").join("f23.ext1").exists());
+
+    assert!(dst.join("dst_v6").join("dst_d5").join("f51.ext1").exists());
+    assert!(dst.join("dst_v6").join("dst_d5").join("f52.ext1").exists());
+    assert!(dst.join("dst_v6").join("dst_d5").join("f53.ext2").exists());
+    assert!(dst.join("dst_v6").join("dst_d5").join("f54.ext2").exists());
+
+    assert!(dst
+        .join("dst_v6")
+        .join("dst_d4")
+        .join("d41")
+        .join("d411")
+        .join("f411.ext1")
+        .exists());
+    assert!(dst
+        .join("dst_v6")
+        .join("dst_d4")
+        .join("d41")
+        .join("d411")
+        .join("f412.ext2")
+        .exists());
+
     Ok(())
 }

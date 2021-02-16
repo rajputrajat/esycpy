@@ -34,7 +34,7 @@ pub fn get_args() -> ArgsType {
         .takes_value(true)
         .value_name("destination_path")
         .required(true);
-    let matches = App::new("EsyCpy")
+    let app = App::new("EsyCpy")
         .version("0.1.0")
         .author("Rajat Rajput <rajputrajat@gmail.com")
         .about("copy, move files and create hardlinks with ease.")
@@ -86,8 +86,8 @@ pub fn get_args() -> ArgsType {
                     }
                 })
                 .value_name("VARIABLE_NAME_VALUE_PAIR"),
-        )
-        .get_matches();
+        );
+    let matches = app.clone().get_matches();
     let json_file_path = matches.value_of("json_file");
     if let Some(json_file_path) = json_file_path {
         let json_file = Path::new(json_file_path).to_owned();
@@ -112,7 +112,12 @@ pub fn get_args() -> ArgsType {
             Some("copy") => ("copy", Operation::Copy_),
             Some("move") => ("move", Operation::Move),
             Some("hardlink") => ("hardlink", Operation::Hardlink),
-            _ => panic!("incorrect subcommand. use help command"),
+            //_ => panic!("incorrect subcommand. use help command"),
+            _ => {
+                let mut app = app;
+                app.print_long_help().unwrap();
+                std::process::exit(0);
+            }
         };
         if let Some(subcommand_matches) = matches.subcommand_matches(subcommand.0) {
             let source = subcommand_matches.value_of("from").unwrap();

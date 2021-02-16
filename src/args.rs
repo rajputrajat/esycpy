@@ -135,7 +135,7 @@ pub fn get_args() -> ArgsType {
 
 const HELP: &str = r#"
 EsyCpy 0.1.0
-Rajat Rajput <rajputrajat@gmail.com
+Rajat Rajput <rajputrajat@gmail.com>
 copy, move and create hardlinks of files/dirs with ease
 
 USAGE:

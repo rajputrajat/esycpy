@@ -90,7 +90,7 @@ impl FileOp {
                         false
                     }
                 };
-                let v_paths = self.get_src_dst_paths(filter, only_cur_dir)?;
+                let v_paths = self.get_src_dst_paths(filter, only_cur_dir, !ext.is_empty())?;
                 self.file_op(&v_paths)?;
             }
             None => unreachable!(),
@@ -108,7 +108,7 @@ impl FileOp {
         match self.op {
             Some(Operation::Move) => self.file_op(&vec![self.p.clone()])?,
             Some(Operation::Hardlink) | Some(Operation::Copy_) => {
-                let v_paths = self.get_src_dst_paths(|f| f.path().is_file(), false)?;
+                let v_paths = self.get_src_dst_paths(|f| f.path().is_file(), false, false)?;
                 self.file_op(&v_paths)?;
             }
             None => unreachable!(),
@@ -123,7 +123,8 @@ impl FileOp {
         dst
     }
 
-    fn get_src_dst_paths<F>(&self, fname_filter: F, only_cur_dir: bool) -> Result<Vec<Paths>>
+    fn get_src_dst_paths<F>(&self, fname_filter: F, only_cur_dir: bool, ext_specified: bool)
+        -> Result<Vec<Paths>>
     where
         F: Fn(&DirEntry) -> bool,
     {
@@ -140,7 +141,7 @@ impl FileOp {
             let file = file.unwrap();
             let src = file.path();
             let dst: String;
-            if only_cur_dir {
+            if ext_specified {
                 dst = Path::new(&self.p.to).join(file.file_name()).to_str().unwrap().to_owned();
             } else {
                 dst = FileOp::fix_offset(&self.p, src.to_str().unwrap());
@@ -150,7 +151,7 @@ impl FileOp {
                 to: dst,
             })
         }
-        //println!("{:#?}", paths);
+        println!("{:#?}", paths);
         trace!("{:?}", paths);
         Ok(paths)
     }
@@ -396,7 +397,7 @@ mod tests {
             to: s_dst.clone(),
         });
         println!("{:?}", file_op);
-        let mut v_returned = file_op.get_src_dst_paths(|_| true, false).unwrap();
+        let mut v_returned = file_op.get_src_dst_paths(|_| true, false, false).unwrap();
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
         let mut v_test: Vec<Paths> = vec![
@@ -447,6 +448,7 @@ mod tests {
                     ext == "file"
                 },
                 true,
+                true
             )
             .unwrap();
         fix_path_vec(&mut v_returned);
@@ -486,6 +488,7 @@ mod tests {
                     ext == "file"
                 },
                 false,
+                true
             )
             .unwrap();
         fix_path_vec(&mut v_returned);
@@ -498,11 +501,11 @@ mod tests {
             },
             Paths {
                 from: format!("{}\\d1\\f11.file", parent(&s_src)),
-                to: format!("{}\\d1\\f11.file", s_dst),
+                to: format!("{}\\f11.file", s_dst),
             },
             Paths {
                 from: format!("{}\\d1\\d12\\f12.file", parent(&s_src)),
-                to: format!("{}\\d1\\d12\\f12.file", s_dst),
+                to: format!("{}\\f12.file", s_dst),
             },
         ];
         fix_path_vec(&mut v_test);
@@ -731,9 +734,9 @@ mod tests {
         });
         file_op.process()?;
         assert!(Path::new(&s_dst).join("f1.file").exists());
-        assert!(Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
-        assert!(Path::new(&s_dst).join("d1").join("f11.file").exists());
-        assert!(!Path::new(&s_dst).join("d3").join("f3.img").exists());
+        assert!(Path::new(&s_dst).join("f12.file").exists());
+        assert!(Path::new(&s_dst).join("f11.file").exists());
+        assert!(!Path::new(&s_dst).join("f3.img").exists());
         Ok(())
     }
 
@@ -754,14 +757,13 @@ mod tests {
         });
         file_op.process()?;
         assert!(!Path::new(&s_dst).join("f1.file").exists());
-        assert!(!Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
-        assert!(!Path::new(&s_dst).join("d1").join("f11.file").exists());
-        assert!(Path::new(&s_dst).join("d3").join("f3.img").exists());
+        assert!(!Path::new(&s_dst).join("f12.file").exists());
+        assert!(!Path::new(&s_dst).join("f11.file").exists());
+        assert!(Path::new(&s_dst).join("f3.img").exists());
         Ok(())
     }
 
     #[test]
-    #[ignore]
     fn copy_all_files_recursively() -> Result<()> {
         let tmp_dir = TempDir::new()?;
         let dst_dir = tmp_dir.path().join("dst");
@@ -777,9 +779,9 @@ mod tests {
             to: s_dst.clone(),
         });
         file_op.process()?;
-        assert!(!Path::new(&s_dst).join("f1.file").exists());
-        assert!(!Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
-        assert!(!Path::new(&s_dst).join("d1").join("f11.file").exists());
+        assert!(Path::new(&s_dst).join("f1.file").exists());
+        assert!(Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        assert!(Path::new(&s_dst).join("d1").join("f11.file").exists());
         assert!(Path::new(&s_dst).join("d3").join("f3.img").exists());
         Ok(())
     }

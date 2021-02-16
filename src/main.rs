@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::trace;
 use simplelog::*;
 use std::fs::File;
 
@@ -14,7 +15,7 @@ fn main() -> Result<()> {
     setup_logger()?;
     log_panics::init();
     let args = get_args();
-    println!("{:#?}", args);
+    trace!("{:#?}", args);
     match args {
         ArgsType::CmdLine {
             op: _,

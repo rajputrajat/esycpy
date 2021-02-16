@@ -12,8 +12,8 @@ pub enum Operation {
 pub enum ArgsType {
     CmdLine {
         op: Operation,
-        from: String,
-        to: String,
+        from: PathBuf,
+        to: PathBuf,
     },
     Json {
         json_file: PathBuf,
@@ -119,8 +119,8 @@ pub fn get_args() -> ArgsType {
             let destination = subcommand_matches.value_of("to").unwrap();
             ArgsType::CmdLine {
                 op: subcommand.1,
-                from: source.to_owned(),
-                to: destination.to_owned(),
+                from: PathBuf::from(source),
+                to: PathBuf::from(destination),
             }
         } else {
             panic!("neither json option is provided, nor cmdline option is used. use help command");

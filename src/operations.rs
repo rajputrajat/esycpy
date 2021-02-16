@@ -1,9 +1,10 @@
 use crate::args::{ArgsType, Operation};
 use anyhow::Result;
 use log::trace;
+use pathdiff::diff_paths;
 use regex::Regex;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
 
 #[derive(Debug)]
@@ -15,8 +16,8 @@ pub struct FileOp {
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Paths {
-    from: String,
-    to: String,
+    from: PathBuf,
+    to: PathBuf,
 }
 
 #[derive(Debug, PartialEq)]
@@ -40,8 +41,8 @@ impl FileOp {
     pub fn from(arg_paths: ArgsType) -> Self {
         let file_op = match arg_paths {
             ArgsType::CmdLine { op, from, to } => {
-                let mut from = FileOp::fix_path(&from);
-                let to = FileOp::fix_path(&to);
+                let mut from = from;
+                let to = to;
                 let file_path = Path::new(&from);
                 let file_name = file_path
                     .file_name()
@@ -51,7 +52,7 @@ impl FileOp {
                 let f_type: Option<FileType>;
                 if file_name.contains('*') {
                     f_type = Some(FileType::Filter(file_name.to_owned()));
-                    from = file_path.parent().unwrap().to_str().unwrap().to_owned();
+                    from = file_path.parent().unwrap().to_owned();
                 } else {
                     if file_path.is_dir() {
                         f_type = Some(FileType::Dir);
@@ -116,11 +117,9 @@ impl FileOp {
         Ok(())
     }
 
-    fn fix_offset(p: &Paths, new_src: &str) -> String {
-        let offset = new_src.replace(&p.from, "");
-        let mut dst = String::from(&p.to);
-        dst.push_str(&offset);
-        dst
+    fn fix_offset(p: &Paths, new_src: &Path) -> PathBuf {
+        let offset = diff_paths(new_src, &p.from).unwrap();
+        p.to.join(offset)
     }
 
     fn get_src_dst_paths<F>(
@@ -144,22 +143,18 @@ impl FileOp {
         {
             let file = file.unwrap();
             let src = file.path();
-            let dst: String;
+            let dst: PathBuf;
             if ext_specified {
-                dst = Path::new(&self.p.to)
-                    .join(file.file_name())
-                    .to_str()
-                    .unwrap()
-                    .to_owned();
+                dst = Path::new(&self.p.to).join(file.file_name())
             } else {
-                dst = FileOp::fix_offset(&self.p, src.to_str().unwrap());
+                dst = FileOp::fix_offset(&self.p, src);
             }
             paths.push(Paths {
-                from: src.to_str().unwrap().to_owned(),
+                from: src.to_owned(),
                 to: dst,
             })
         }
-        println!("{:#?}", paths);
+        trace!("{:#?}", paths);
         trace!("{:?}", paths);
         Ok(paths)
     }
@@ -184,21 +179,6 @@ impl FileOp {
             }
         }
         Ok(())
-    }
-
-    fn fix_path(input: &str) -> String {
-        let forward_slash = input.replace("\\", "/");
-        trace!("{}", forward_slash.clone());
-        let mut only_one_slash = String::new();
-        let mut prev_char: Option<char> = None;
-        forward_slash.chars().for_each(|c| {
-            only_one_slash.push(c.clone());
-            if c == '/' && prev_char == Some('/') {
-                only_one_slash.pop();
-            }
-            prev_char = Some(c);
-        });
-        only_one_slash
     }
 
     fn is_dst_valid(dst: &str) -> bool {
@@ -233,8 +213,8 @@ mod tests {
         let file_op = FileOp {
             op: Some(Operation::Hardlink),
             p: Paths {
-                from: String::new(),
-                to: String::new(),
+                from: PathBuf::new(),
+                to: PathBuf::new(),
             },
             ..Default::default()
         };
@@ -242,8 +222,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         file_op
             .file_op(&vec![Paths {
-                from: src_file.to_str().unwrap().to_owned(),
-                to: dst_file.to_str().unwrap().to_owned(),
+                from: src_file.clone(),
+                to: dst_file.clone(),
             }])
             .unwrap();
         assert!(src_file.exists());
@@ -268,8 +248,8 @@ mod tests {
         let file_op = FileOp {
             op: Some(Operation::Hardlink),
             p: Paths {
-                from: String::new(),
-                to: String::new(),
+                from: PathBuf::new(),
+                to: PathBuf::new(),
             },
             ..Default::default()
         };
@@ -277,8 +257,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         file_op
             .file_op(&vec![Paths {
-                from: src_file.to_str().unwrap().to_owned(),
-                to: dst_file.to_str().unwrap().to_owned(),
+                from: src_file.clone(),
+                to: dst_file.clone(),
             }])
             .unwrap();
         assert!(src_file.exists());
@@ -303,8 +283,8 @@ mod tests {
         let file_op = FileOp {
             op: Some(Operation::Move),
             p: Paths {
-                from: String::new(),
-                to: String::new(),
+                from: PathBuf::new(),
+                to: PathBuf::new(),
             },
             ..Default::default()
         };
@@ -312,8 +292,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         file_op
             .file_op(&vec![Paths {
-                from: src_file.to_str().unwrap().to_owned(),
-                to: dst_file.to_str().unwrap().to_owned(),
+                from: src_file.clone(),
+                to: dst_file.clone(),
             }])
             .unwrap();
         assert!(!src_file.exists());
@@ -339,8 +319,8 @@ mod tests {
         let file_op = FileOp {
             op: Some(Operation::Copy_),
             p: Paths {
-                from: String::new(),
-                to: String::new(),
+                from: PathBuf::new(),
+                to: PathBuf::new(),
             },
             ..Default::default()
         };
@@ -348,8 +328,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         file_op
             .file_op(&vec![Paths {
-                from: src_file.to_str().unwrap().to_owned(),
-                to: dst_file.to_str().unwrap().to_owned(),
+                from: src_file.clone(),
+                to: dst_file.clone(),
             }])
             .unwrap();
         assert!(src_file.exists());
@@ -362,10 +342,10 @@ mod tests {
     #[test]
     fn fix_path_positive() {
         assert_eq!(
-            FileOp::fix_path("c:\\\\\\Users\\\\\\\\test///dir"),
+            fix_path("c:\\\\\\Users\\\\\\\\test///dir"),
             String::from("c:/Users/test/dir")
         );
-        assert_eq!(FileOp::fix_path("/mnt///dr"), String::from("/mnt/dr"));
+        assert_eq!(fix_path("/mnt///dr"), String::from("/mnt/dr"));
     }
 
     #[test]
@@ -381,48 +361,48 @@ mod tests {
         assert_eq!(
             FileOp::fix_offset(
                 &Paths {
-                    from: "c:/Users/test/dir1".to_owned(),
-                    to: "c:/Users/test/dir2".to_owned()
+                    from: PathBuf::from("c:/Users/test/dir1"),
+                    to: PathBuf::from("c:/Users/test/dir2")
                 },
-                "c:/Users/test/dir1/dir3/dir4/a_file"
+                Path::new("c:/Users/test/dir1/dir3/dir4/a_file")
             ),
-            "c:/Users/test/dir2/dir3/dir4/a_file"
+            PathBuf::from("c:/Users/test/dir2/dir3/dir4/a_file")
         );
     }
 
     #[test]
     fn check_get_src_dst_paths() {
-        println!("reached here");
+        trace!("reached here");
         let tmp_dir = TempDir::new().unwrap();
         let dst_dir = tmp_dir.path().join("dst");
-        let s_src = "./test_files/test_src_dst_paths".to_owned();
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
-        println!("reached here");
+        let s_src = PathBuf::from("./test_files/test_src_dst_paths");
+        let s_dst = dst_dir;
+        trace!("reached here");
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Move,
             from: s_src.clone(),
             to: s_dst.clone(),
         });
-        println!("{:?}", file_op);
+        trace!("{:?}", file_op);
         let mut v_returned = file_op.get_src_dst_paths(|_| true, false, false).unwrap();
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
         let mut v_test: Vec<Paths> = vec![
             Paths {
-                from: format!("{}\\f1.file", s_src),
-                to: format!("{}\\f1.file", s_dst),
+                from: s_src.join("f1.file"),
+                to: s_dst.join("f1.file"),
             },
             Paths {
-                from: format!("{}\\d1\\f11.file", s_src),
-                to: format!("{}\\d1\\f11.file", s_dst),
+                from: s_src.join("d1").join("f11.file"),
+                to: s_dst.join("d1").join("f11.file"),
             },
             Paths {
-                from: format!("{}\\d1\\d12\\f12.file", s_src),
-                to: format!("{}\\d1\\d12\\f12.file", s_dst),
+                from: s_src.join("d1").join("d12").join("f12.file"),
+                to: s_dst.join("d1").join("d12").join("f12.file"),
             },
             Paths {
-                from: format!("{}\\d3\\f3.img", s_src),
-                to: format!("{}\\d3\\f3.img", s_dst),
+                from: s_src.join("d3").join("f3.img"),
+                to: s_dst.join("d3").join("f3.img"),
             },
         ];
         fix_path_vec(&mut v_test);
@@ -434,14 +414,14 @@ mod tests {
     fn check_paths_specific_file_only_cur_dir() {
         let tmp_dir = TempDir::new().unwrap();
         let dst_dir = tmp_dir.path().join("dst");
-        let s_src = "./test_files/test_src_dst_paths/*.file".to_owned();
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_src = PathBuf::from("./test_files/test_src_dst_paths/*.file");
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Move,
             from: s_src.clone(),
             to: s_dst.clone(),
         });
-        println!("{:?}", file_op);
+        trace!("{:?}", file_op);
         let mut v_returned = file_op
             .get_src_dst_paths(
                 |f| {
@@ -460,10 +440,9 @@ mod tests {
             .unwrap();
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
-        let parent = |s: &str| Path::new(s).parent().unwrap().to_str().unwrap().to_owned();
         let mut v_test: Vec<Paths> = vec![Paths {
-            from: format!("{}\\f1.file", parent(&s_src)),
-            to: format!("{}\\f1.file", s_dst),
+            from: s_src.parent().unwrap().join("f1.file"),
+            to: s_dst.join("f1.file"),
         }];
         fix_path_vec(&mut v_test);
         v_test.sort_unstable();
@@ -474,14 +453,14 @@ mod tests {
     fn check_paths_recursive_specific_file_type() {
         let tmp_dir = TempDir::new().unwrap();
         let dst_dir = tmp_dir.path().join("dst");
-        let s_src = "./test_files/test_src_dst_paths/**.file".to_owned();
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_src = PathBuf::from("./test_files/test_src_dst_paths/**.file");
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Move,
             from: s_src.clone(),
             to: s_dst.clone(),
         });
-        println!("{:?}", file_op);
+        trace!("{:?}", file_op);
         let mut v_returned = file_op
             .get_src_dst_paths(
                 |f| {
@@ -500,19 +479,23 @@ mod tests {
             .unwrap();
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
-        let parent = |s: &str| Path::new(s).parent().unwrap().to_str().unwrap().to_owned();
         let mut v_test: Vec<Paths> = vec![
             Paths {
-                from: format!("{}\\f1.file", parent(&s_src)),
-                to: format!("{}\\f1.file", s_dst),
+                from: s_src.parent().unwrap().join("f1.file"),
+                to: s_dst.join("f1.file"),
             },
             Paths {
-                from: format!("{}\\d1\\f11.file", parent(&s_src)),
-                to: format!("{}\\f11.file", s_dst),
+                from: s_src.parent().unwrap().join("d1").join("f11.file"),
+                to: s_dst.join("f11.file"),
             },
             Paths {
-                from: format!("{}\\d1\\d12\\f12.file", parent(&s_src)),
-                to: format!("{}\\f12.file", s_dst),
+                from: s_src
+                    .parent()
+                    .unwrap()
+                    .join("d1")
+                    .join("d12")
+                    .join("f12.file"),
+                to: s_dst.join("f12.file"),
             },
         ];
         fix_path_vec(&mut v_test);
@@ -548,8 +531,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: src_file.to_str().unwrap().to_owned(),
-            to: dst_file.to_str().unwrap().to_owned(),
+            from: src_file.clone(),
+            to: dst_file.clone(),
         });
         file_op.process().unwrap();
         assert!(src_file.exists());
@@ -561,8 +544,8 @@ mod tests {
 
     fn fix_path_vec(v: &mut Vec<Paths>) {
         for p in v {
-            p.from = FileOp::fix_path(&p.from);
-            p.to = FileOp::fix_path(&p.to);
+            p.from = PathBuf::from(fix_path(p.from.to_str().unwrap()));
+            p.to = PathBuf::from(fix_path(p.to.to_str().unwrap()));
         }
     }
 
@@ -582,8 +565,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Move,
-            from: src_file.to_str().unwrap().to_owned(),
-            to: dst_file.to_str().unwrap().to_owned(),
+            from: src_file.clone(),
+            to: dst_file.clone(),
         });
         file_op.process().unwrap();
         assert!(!src_file.exists());
@@ -606,8 +589,8 @@ mod tests {
         let dst_file = dst_dir.join("sample_file");
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Hardlink,
-            from: src_file.to_str().unwrap().to_owned(),
-            to: dst_file.to_str().unwrap().to_owned(),
+            from: src_file.clone(),
+            to: dst_file.clone(),
         });
         file_op.process().unwrap();
         assert!(src_file.exists());
@@ -625,10 +608,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone()).unwrap();
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default()).unwrap();
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: src.to_str().unwrap().to_owned(),
+            from: src.clone(),
             to: s_dst.clone(),
         });
         file_op.process().unwrap();
@@ -650,10 +633,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone()).unwrap();
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default()).unwrap();
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Move,
-            from: src.to_str().unwrap().to_owned(),
+            from: src.clone(),
             to: s_dst.clone(),
         });
         let v_src: Vec<String> = WalkDir::new(&src)
@@ -663,7 +646,7 @@ mod tests {
         file_op.process().unwrap();
         let _v_dst = WalkDir::new(s_dst).into_iter().for_each(|f| {
             let dst = f.unwrap().path().to_str().unwrap().to_owned();
-            println!("{}", dst);
+            trace!("{}", dst);
             assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
         });
         assert!(!src.exists());
@@ -677,10 +660,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone()).unwrap();
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default()).unwrap();
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Hardlink,
-            from: src.to_str().unwrap().to_owned(),
+            from: src.clone(),
             to: s_dst.clone(),
         });
         file_op.process().unwrap();
@@ -702,15 +685,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone())?;
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: Path::new(&src)
-                .join("test_src_dst_paths")
-                .join("*.file")
-                .to_str()
-                .unwrap()
-                .to_owned(),
+            from: Path::new(&src).join("test_src_dst_paths").join("*.file"),
             to: s_dst.clone(),
         });
         file_op.process()?;
@@ -731,15 +709,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone())?;
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: Path::new(&src)
-                .join("test_src_dst_paths")
-                .join("**.file")
-                .to_str()
-                .unwrap()
-                .to_owned(),
+            from: Path::new(&src).join("test_src_dst_paths").join("**.file"),
             to: s_dst.clone(),
         });
         file_op.process()?;
@@ -758,15 +731,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone())?;
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: Path::new(&src)
-                .join("test_src_dst_paths")
-                .join("**.img")
-                .to_str()
-                .unwrap()
-                .to_owned(),
+            from: Path::new(&src).join("test_src_dst_paths").join("**.img"),
             to: s_dst.clone(),
         });
         file_op.process()?;
@@ -785,15 +753,10 @@ mod tests {
         let src = tmp_dir.path().join("src");
         fs::create_dir_all(src.clone())?;
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
-        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let s_dst = dst_dir;
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: Path::new(&src)
-                .join("test_src_dst_paths")
-                .join("**")
-                .to_str()
-                .unwrap()
-                .to_owned(),
+            from: Path::new(&src).join("test_src_dst_paths").join("**"),
             to: s_dst.clone(),
         });
         file_op.process()?;
@@ -806,5 +769,20 @@ mod tests {
         assert!(Path::new(&s_dst).join("d1").join("f11.file").exists());
         assert!(Path::new(&s_dst).join("d3").join("f3.img").exists());
         Ok(())
+    }
+
+    fn fix_path(input: &str) -> String {
+        let forward_slash = input.replace("\\", "/");
+        trace!("{}", forward_slash.clone());
+        let mut only_one_slash = String::new();
+        let mut prev_char: Option<char> = None;
+        forward_slash.chars().for_each(|c| {
+            only_one_slash.push(c.clone());
+            if c == '/' && prev_char == Some('/') {
+                only_one_slash.pop();
+            }
+            prev_char = Some(c);
+        });
+        only_one_slash
     }
 }

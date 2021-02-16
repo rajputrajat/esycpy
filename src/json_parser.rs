@@ -2,7 +2,7 @@ use crate::args::{ArgsType, Operation};
 use log::debug;
 use serde::Deserialize;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub fn get_json_args(args: ArgsType) -> Vec<ArgsType> {
     match args {
@@ -49,8 +49,8 @@ fn map_variables(
         };
         let mapped_arg = ArgsType::CmdLine {
             op: todo,
-            from: d.src,
-            to: d.dst,
+            from: PathBuf::from(d.src),
+            to: PathBuf::from(d.dst),
         };
         mapped_args.push(mapped_arg)
     });
@@ -110,18 +110,18 @@ mod tests {
             ],
         };
         let variables = Some(vec![
-            ("var1".to_owned(), "VAR1".to_owned()),
-            ("var2".to_owned(), "VAR2".to_owned()),
-            ("var3".to_owned(), "VAR3".to_owned()),
-            ("var4".to_owned(), "VAR4".to_owned()),
+            (String::from("var1"), String::from("VAR1")),
+            (String::from("var2"), String::from("VAR2")),
+            (String::from("var3"), String::from("VAR3")),
+            (String::from("var4"), String::from("VAR4")),
         ]);
         let mut ops = vec![Operation::Move, Operation::Hardlink, Operation::Copy_];
         let mut arg_types: Vec<ArgsType> = Vec::new();
         asset_def.jobs.iter().for_each(|d| {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
-                to: d.dst.replace("var", "VAR"),
-                from: d.src.replace("var", "VAR"),
+                to: PathBuf::from(d.dst.replace("var", "VAR")),
+                from: PathBuf::from(d.src.replace("var", "VAR")),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -155,8 +155,8 @@ mod tests {
         asset_def.jobs.iter().for_each(|d| {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
-                to: d.dst.clone(),
-                from: d.src.clone(),
+                to: PathBuf::from(d.dst.clone()),
+                from: PathBuf::from(d.src.clone()),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -174,16 +174,16 @@ mod tests {
             }],
         };
         let variables = Some(vec![
-            ("var1".to_owned(), "VAR1".to_owned()),
-            ("var3".to_owned(), "VAR3".to_owned()),
+            (String::from("var1"), String::from("VAR1")),
+            (String::from("var3"), String::from("VAR3")),
         ]);
         let mut ops = vec![Operation::Copy_];
         let mut arg_types: Vec<ArgsType> = Vec::new();
         asset_def.jobs.iter().for_each(|d| {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
-                to: d.dst.clone(),
-                from: d.src.clone(),
+                to: PathBuf::from(d.dst.clone()),
+                from: PathBuf::from(d.src.clone()),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -200,14 +200,14 @@ mod tests {
                 dst: "this/is/var3/yes".to_owned(),
             }],
         };
-        let variables = Some(vec![("var1".to_owned(), "VAR1".to_owned())]);
+        let variables = Some(vec![(String::from("var1"), String::from("VAR1"))]);
         let mut ops = vec![Operation::Move];
         let mut arg_types: Vec<ArgsType> = Vec::new();
         asset_def.jobs.iter().for_each(|d| {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
-                to: d.dst.replace("var", "VAR"),
-                from: d.src.replace("var", "VAR"),
+                to: PathBuf::from(d.dst.replace("var", "VAR")),
+                from: PathBuf::from(d.src.replace("var", "VAR")),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -237,13 +237,13 @@ mod tests {
         let out_args = vec![
             ArgsType::CmdLine {
                 op: Operation::Hardlink,
-                from: String::from("c:/Users/test/sol_dir/../Bink2/lib/*.dll"),
-                to: String::from("c:/Users/test/out_dir"),
+                from: PathBuf::from("c:/Users/test/sol_dir/../Bink2/lib/*.dll"),
+                to: PathBuf::from("c:/Users/test/out_dir"),
             },
             ArgsType::CmdLine {
                 op: Operation::Move,
-                from: String::from("c:/Users/test/proj_dir/assets"),
-                to: String::from("c:/Users/test/out_dir/debug/Games/test_proj"),
+                from: PathBuf::from("c:/Users/test/proj_dir/assets"),
+                to: PathBuf::from("c:/Users/test/out_dir/debug/Games/test_proj"),
             },
         ];
         assert_eq!(out_args, get_json_args(input_json_args));

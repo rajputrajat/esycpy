@@ -123,8 +123,12 @@ impl FileOp {
         dst
     }
 
-    fn get_src_dst_paths<F>(&self, fname_filter: F, only_cur_dir: bool, ext_specified: bool)
-        -> Result<Vec<Paths>>
+    fn get_src_dst_paths<F>(
+        &self,
+        fname_filter: F,
+        only_cur_dir: bool,
+        ext_specified: bool,
+    ) -> Result<Vec<Paths>>
     where
         F: Fn(&DirEntry) -> bool,
     {
@@ -142,7 +146,11 @@ impl FileOp {
             let src = file.path();
             let dst: String;
             if ext_specified {
-                dst = Path::new(&self.p.to).join(file.file_name()).to_str().unwrap().to_owned();
+                dst = Path::new(&self.p.to)
+                    .join(file.file_name())
+                    .to_str()
+                    .unwrap()
+                    .to_owned();
             } else {
                 dst = FileOp::fix_offset(&self.p, src.to_str().unwrap());
             }
@@ -447,7 +455,7 @@ mod tests {
                     ext == "file"
                 },
                 true,
-                true
+                true,
             )
             .unwrap();
         fix_path_vec(&mut v_returned);
@@ -487,7 +495,7 @@ mod tests {
                     ext == "file"
                 },
                 false,
-                true
+                true,
             )
             .unwrap();
         fix_path_vec(&mut v_returned);
@@ -628,10 +636,7 @@ mod tests {
             .into_iter()
             .map(|f| f.unwrap().path().to_str().unwrap().to_owned())
             .collect();
-        let _v_dst = WalkDir::new(s_dst)
-            .into_iter()
-            .for_each(|f|
-        {
+        let _v_dst = WalkDir::new(s_dst).into_iter().for_each(|f| {
             let dst = f.unwrap().path().to_str().unwrap().to_owned();
             assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
         });
@@ -656,10 +661,7 @@ mod tests {
             .map(|f| f.unwrap().path().to_str().unwrap().to_owned())
             .collect();
         file_op.process().unwrap();
-        let _v_dst = WalkDir::new(s_dst)
-            .into_iter()
-            .for_each(|f|
-        {
+        let _v_dst = WalkDir::new(s_dst).into_iter().for_each(|f| {
             let dst = f.unwrap().path().to_str().unwrap().to_owned();
             println!("{}", dst);
             assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
@@ -686,10 +688,7 @@ mod tests {
             .into_iter()
             .map(|f| f.unwrap().path().to_str().unwrap().to_owned())
             .collect();
-        let _v_dst = WalkDir::new(s_dst)
-            .into_iter()
-            .for_each(|f|
-        {
+        let _v_dst = WalkDir::new(s_dst).into_iter().for_each(|f| {
             let dst = f.unwrap().path().to_str().unwrap().to_owned();
             assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
         });
@@ -707,12 +706,20 @@ mod tests {
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
             from: Path::new(&src)
-                .join("test_src_dst_paths").join("*.file").to_str().unwrap().to_owned(),
+                .join("test_src_dst_paths")
+                .join("*.file")
+                .to_str()
+                .unwrap()
+                .to_owned(),
             to: s_dst.clone(),
         });
         file_op.process()?;
         assert!(Path::new(&s_dst).join("f1.file").exists());
-        assert!(!Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        assert!(!Path::new(&s_dst)
+            .join("d1")
+            .join("d12")
+            .join("f12.file")
+            .exists());
         Ok(())
     }
 
@@ -728,7 +735,11 @@ mod tests {
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
             from: Path::new(&src)
-                .join("test_src_dst_paths").join("**.file").to_str().unwrap().to_owned(),
+                .join("test_src_dst_paths")
+                .join("**.file")
+                .to_str()
+                .unwrap()
+                .to_owned(),
             to: s_dst.clone(),
         });
         file_op.process()?;
@@ -751,7 +762,11 @@ mod tests {
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
             from: Path::new(&src)
-                .join("test_src_dst_paths").join("**.img").to_str().unwrap().to_owned(),
+                .join("test_src_dst_paths")
+                .join("**.img")
+                .to_str()
+                .unwrap()
+                .to_owned(),
             to: s_dst.clone(),
         });
         file_op.process()?;
@@ -774,12 +789,20 @@ mod tests {
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
             from: Path::new(&src)
-                .join("test_src_dst_paths").join("**").to_str().unwrap().to_owned(),
+                .join("test_src_dst_paths")
+                .join("**")
+                .to_str()
+                .unwrap()
+                .to_owned(),
             to: s_dst.clone(),
         });
         file_op.process()?;
         assert!(Path::new(&s_dst).join("f1.file").exists());
-        assert!(Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        assert!(Path::new(&s_dst)
+            .join("d1")
+            .join("d12")
+            .join("f12.file")
+            .exists());
         assert!(Path::new(&s_dst).join("d1").join("f11.file").exists());
         assert!(Path::new(&s_dst).join("d3").join("f3.img").exists());
         Ok(())

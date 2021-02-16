@@ -76,9 +76,9 @@ impl FileOp {
             Some(FileType::File) => self.file_op(&vec![self.p.clone()])?,
             Some(FileType::Dir) => self.dir_to_dir()?,
             Some(FileType::Filter(file_name)) => {
-                let mut only_cur_dir = false;
+                let mut only_cur_dir = true;
                 if file_name.contains("**") {
-                    only_cur_dir = true;
+                    only_cur_dir = false;
                 }
                 let ext = FileOp::get_ext(file_name)?;
                 let filter = |f: &DirEntry| -> bool {
@@ -150,6 +150,8 @@ impl FileOp {
                 to: dst,
             })
         }
+        //println!("{:#?}", paths);
+        trace!("{:?}", paths);
         Ok(paths)
     }
 
@@ -211,6 +213,7 @@ impl FileOp {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+    use anyhow::anyhow;
 
     #[test]
     #[should_panic]
@@ -688,5 +691,25 @@ mod tests {
             let dst = f.unwrap().path().to_str().unwrap().to_owned();
             assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
         });
+    }
+
+    #[test]
+    fn copy_specific_files_cur_dir() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let dst_dir = tmp_dir.path().join("dst");
+        let base = Path::new("./test_files/test_src_dst_paths");
+        let src = tmp_dir.path().join("src");
+        fs::create_dir_all(src.clone())?;
+        fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Copy_,
+            from: Path::new(&src).join("test_src_dst_paths").join("*.file").to_str().unwrap().to_owned(),
+            to: s_dst.clone(),
+        });
+        file_op.process()?;
+        assert!(Path::new(&s_dst).join("f1.file").exists());
+        assert!(!Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        Ok(())
     }
 }

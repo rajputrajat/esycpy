@@ -106,15 +106,8 @@ impl FileOp {
 
     fn dir_to_dir(&self) -> Result<()> {
         match self.op {
-            Some(Operation::Copy_) => {
-                let copy_options = fs_extra::dir::CopyOptions {
-                    overwrite: true,
-                    ..Default::default()
-                };
-                fs_extra::dir::copy(&self.p.from, &self.p.to, &copy_options)?;
-            }
             Some(Operation::Move) => self.file_op(&vec![self.p.clone()])?,
-            Some(Operation::Hardlink) => {
+            Some(Operation::Hardlink) | Some(Operation::Copy_) => {
                 let v_paths = self.get_src_dst_paths(|f| f.path().is_file(), false)?;
                 self.file_op(&v_paths)?;
             }
@@ -521,10 +514,123 @@ mod tests {
     #[test]
     fn files_from_only_this_dir() {}
 
+    #[test]
+    fn copy_file() {
+        let tmp_dir = TempDir::new().unwrap();
+        let src_dir = tmp_dir.path().join("src");
+        fs::create_dir_all(src_dir.as_path()).unwrap();
+        let src_file = src_dir.join("sample_file");
+        let _ = fs::copy(
+            "test_files/for_file_operations/sample_file",
+            src_file.as_path(),
+        )
+        .unwrap();
+        assert!(src_file.exists());
+        let dst_dir = tmp_dir.path().join("dst");
+        let dst_file = dst_dir.join("sample_file");
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Copy_,
+            from: src_file.to_str().unwrap().to_owned(),
+            to: dst_file.to_str().unwrap().to_owned(),
+        });
+        file_op.process().unwrap();
+        assert!(src_file.exists());
+        assert!(dst_file.exists());
+        let src_file_text = fs::read_to_string(src_file).unwrap();
+        let dst_file_text = fs::read_to_string(dst_file).unwrap();
+        assert_eq!(src_file_text, dst_file_text);
+    }
+
     fn fix_path_vec(v: &mut Vec<Paths>) {
         for p in v {
             p.from = FileOp::fix_path(&p.from);
             p.to = FileOp::fix_path(&p.to);
         }
     }
+
+    #[test]
+    fn move_file() {
+        let tmp_dir = TempDir::new().unwrap();
+        let src_dir = tmp_dir.path().join("src");
+        fs::create_dir_all(src_dir.as_path()).unwrap();
+        let src_file = src_dir.join("sample_file");
+        let _ = fs::copy(
+            "test_files/for_file_operations/sample_file",
+            src_file.as_path(),
+        )
+        .unwrap();
+        assert!(src_file.exists());
+        let dst_dir = tmp_dir.path().join("dst");
+        let dst_file = dst_dir.join("sample_file");
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Move,
+            from: src_file.to_str().unwrap().to_owned(),
+            to: dst_file.to_str().unwrap().to_owned(),
+        });
+        file_op.process().unwrap();
+        assert!(!src_file.exists());
+        assert!(dst_file.exists());
+    }
+
+    #[test]
+    fn hardlink_file() {
+        let tmp_dir = TempDir::new().unwrap();
+        let src_dir = tmp_dir.path().join("src");
+        fs::create_dir_all(src_dir.as_path()).unwrap();
+        let src_file = src_dir.join("sample_file");
+        let _ = fs::copy(
+            "test_files/for_file_operations/sample_file",
+            src_file.as_path(),
+        )
+        .unwrap();
+        assert!(src_file.exists());
+        let dst_dir = tmp_dir.path().join("dst");
+        let dst_file = dst_dir.join("sample_file");
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Hardlink,
+            from: src_file.to_str().unwrap().to_owned(),
+            to: dst_file.to_str().unwrap().to_owned(),
+        });
+        file_op.process().unwrap();
+        assert!(src_file.exists());
+        assert!(dst_file.exists());
+        let src_file_text = fs::read_to_string(src_file).unwrap();
+        let dst_file_text = fs::read_to_string(dst_file).unwrap();
+        assert_eq!(src_file_text, dst_file_text);
+    }
+
+    #[test]
+    fn copy_dir() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dst_dir = tmp_dir.path().join("dst");
+        let base = Path::new("./test_files/test_src_dst_paths");
+        let src = tmp_dir.path().join("src");
+        fs::create_dir_all(src.clone()).unwrap();
+        fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default()).unwrap();
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Copy_,
+            from: src.to_str().unwrap().to_owned(),
+            to: s_dst.clone(),
+        });
+        file_op.process().unwrap();
+        let get_paths = |s: &Path| -> Vec<String> {
+            WalkDir::new(s)
+            .into_iter()
+            .map(|f| f.unwrap().path().to_str().unwrap().to_owned())
+            .collect()
+            };
+        let mut v_src = get_paths(&src);
+        v_src.sort_unstable();
+        let v_dst = get_paths(Path::new(&s_dst));
+        let mut v_dst_transformed: Vec<String> = v_dst
+            .iter()
+            .fold(Vec::new(), |mut v, f| {
+                v.push(f.replace("\\dst", "\\src"));
+                v
+            });
+        v_dst_transformed.sort_unstable();
+        assert_eq!(v_src, v_dst_transformed);
+    }
 }
+

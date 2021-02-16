@@ -656,5 +656,32 @@ mod tests {
         });
         assert!(!src.exists());
     }
-}
 
+    #[test]
+    fn hardlink_dir() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dst_dir = tmp_dir.path().join("dst");
+        let base = Path::new("./test_files/test_src_dst_paths");
+        let src = tmp_dir.path().join("src");
+        fs::create_dir_all(src.clone()).unwrap();
+        fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default()).unwrap();
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Copy_,
+            from: src.to_str().unwrap().to_owned(),
+            to: s_dst.clone(),
+        });
+        file_op.process().unwrap();
+        let v_src: Vec<String> = WalkDir::new(src)
+            .into_iter()
+            .map(|f| f.unwrap().path().to_str().unwrap().to_owned())
+            .collect();
+        let _v_dst = WalkDir::new(s_dst)
+            .into_iter()
+            .for_each(|f|
+        {
+            let dst = f.unwrap().path().to_str().unwrap().to_owned();
+            assert!(v_src.iter().any(|s| s == &dst.replace("\\dst", "\\src")));
+        });
+    }
+}

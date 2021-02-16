@@ -704,12 +704,59 @@ mod tests {
         let s_dst = dst_dir.to_str().unwrap().to_owned();
         let file_op = FileOp::from(ArgsType::CmdLine {
             op: Operation::Copy_,
-            from: Path::new(&src).join("test_src_dst_paths").join("*.file").to_str().unwrap().to_owned(),
+            from: Path::new(&src)
+                .join("test_src_dst_paths").join("*.file").to_str().unwrap().to_owned(),
             to: s_dst.clone(),
         });
         file_op.process()?;
         assert!(Path::new(&s_dst).join("f1.file").exists());
         assert!(!Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn copy_specific_files_recursively() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let dst_dir = tmp_dir.path().join("dst");
+        let base = Path::new("./test_files/test_src_dst_paths");
+        let src = tmp_dir.path().join("src");
+        fs::create_dir_all(src.clone())?;
+        fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Copy_,
+            from: Path::new(&src)
+                .join("test_src_dst_paths").join("**.file").to_str().unwrap().to_owned(),
+            to: s_dst.clone(),
+        });
+        file_op.process()?;
+        assert!(Path::new(&s_dst).join("f1.file").exists());
+        assert!(Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        assert!(Path::new(&s_dst).join("d1").join("f11.file").exists());
+        assert!(!Path::new(&s_dst).join("d3").join("f3.img").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn copy_specific_files_recursively_2() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let dst_dir = tmp_dir.path().join("dst");
+        let base = Path::new("./test_files/test_src_dst_paths");
+        let src = tmp_dir.path().join("src");
+        fs::create_dir_all(src.clone())?;
+        fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default())?;
+        let s_dst = dst_dir.to_str().unwrap().to_owned();
+        let file_op = FileOp::from(ArgsType::CmdLine {
+            op: Operation::Copy_,
+            from: Path::new(&src)
+                .join("test_src_dst_paths").join("**.img").to_str().unwrap().to_owned(),
+            to: s_dst.clone(),
+        });
+        file_op.process()?;
+        assert!(!Path::new(&s_dst).join("f1.file").exists());
+        assert!(!Path::new(&s_dst).join("d1").join("d12").join("f12.file").exists());
+        assert!(!Path::new(&s_dst).join("d1").join("f11.file").exists());
+        assert!(Path::new(&s_dst).join("d3").join("f3.img").exists());
         Ok(())
     }
 }

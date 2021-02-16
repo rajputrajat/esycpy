@@ -1,5 +1,5 @@
 [package]
-name = "asset_maker"
+name = "esycpy"
 version = "0.1.0"
 authors = ["Rajat Rajput <rajputrajat@gmail.com>"]
 edition = "2018"
@@ -19,3 +19,4 @@ tempfile = "3.2"
 anyhow = "1.0.38"
 fs_extra = "1.2.0"
 pathdiff = "0.2.0"
+assert_cmd = "1.0.3"

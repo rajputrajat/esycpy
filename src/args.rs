@@ -112,7 +112,6 @@ pub fn get_args() -> ArgsType {
             Some("copy") => ("copy", Operation::Copy_),
             Some("move") => ("move", Operation::Move),
             Some("hardlink") => ("hardlink", Operation::Hardlink),
-            //_ => panic!("incorrect subcommand. use help command"),
             _ => {
                 let mut app = app;
                 app.print_long_help().unwrap();

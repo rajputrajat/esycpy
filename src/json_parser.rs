@@ -43,8 +43,12 @@ fn map_variables(
         };
         if let Some(variables) = variables.clone() {
             variables.iter().for_each(|v| {
-                d.src = d.src.replace(v.0.as_str(), v.1.as_str());
-                d.dst = d.dst.replace(v.0.as_str(), v.1.as_str());
+                d.src = d
+                    .src
+                    .replace(&format!("{{{}}}", v.0.as_str()), v.1.as_str());
+                d.dst = d
+                    .dst
+                    .replace(&format!("{{{}}}", v.0.as_str()), v.1.as_str());
             });
         };
         let mapped_arg = ArgsType::CmdLine {
@@ -94,18 +98,18 @@ mod tests {
             jobs: vec![
                 JobConfigs {
                     todo: "copy".to_owned(),
-                    src: "this/is/var1/yes".to_owned(),
-                    dst: "this/is/var2/yes".to_owned(),
+                    src: "this/is/{var1}/yes".to_owned(),
+                    dst: "this/is/{var2}/yes".to_owned(),
                 },
                 JobConfigs {
                     todo: "hardlink".to_owned(),
-                    src: "this/is/var4/yes".to_owned(),
-                    dst: "this/is/var3/yes".to_owned(),
+                    src: "this/is/{var4}/yes".to_owned(),
+                    dst: "this/is/{var3}/yes".to_owned(),
                 },
                 JobConfigs {
                     todo: "move".to_owned(),
-                    src: "this/is/var2/yes".to_owned(),
-                    dst: "this/is/var3/yes".to_owned(),
+                    src: "this/is/{var2}/yes".to_owned(),
+                    dst: "this/is/{var3}/yes".to_owned(),
                 },
             ],
         };
@@ -120,8 +124,18 @@ mod tests {
         asset_def.jobs.iter().for_each(|d| {
             arg_types.push(ArgsType::CmdLine {
                 op: ops.pop().unwrap(),
-                to: PathBuf::from(d.dst.replace("var", "VAR")),
-                from: PathBuf::from(d.src.replace("var", "VAR")),
+                to: PathBuf::from(
+                    d.dst
+                        .replace("var", "VAR")
+                        .replace("{", "")
+                        .replace("}", ""),
+                ),
+                from: PathBuf::from(
+                    d.src
+                        .replace("var", "VAR")
+                        .replace("{", "")
+                        .replace("}", ""),
+                ),
             })
         });
         assert_eq!(arg_types, map_variables(asset_def, variables));
@@ -218,18 +232,18 @@ mod tests {
         let input_json_args = ArgsType::Json {
             json_file: Path::new("./test_files/asset_relocation_def.json").to_owned(),
             variables: Some(vec![
-                (String::from("{Configuration}"), String::from("debug")),
-                (String::from("{ProjectName}"), String::from("test_proj")),
+                (String::from("Configuration"), String::from("debug")),
+                (String::from("ProjectName"), String::from("test_proj")),
                 (
-                    String::from("{ProjectDir}"),
+                    String::from("ProjectDir"),
                     String::from("c:/Users/test/proj_dir"),
                 ),
                 (
-                    String::from("{SolutionDir}"),
+                    String::from("SolutionDir"),
                     String::from("c:/Users/test/sol_dir"),
                 ),
                 (
-                    String::from("{OutDir}"),
+                    String::from("OutDir"),
                     String::from("c:/Users/test/out_dir"),
                 ),
             ]),

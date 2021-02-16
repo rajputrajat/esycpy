@@ -672,7 +672,7 @@ mod tests {
         fs_extra::dir::copy(base, &src, &fs_extra::dir::CopyOptions::default()).unwrap();
         let s_dst = dst_dir.to_str().unwrap().to_owned();
         let file_op = FileOp::from(ArgsType::CmdLine {
-            op: Operation::Copy_,
+            op: Operation::Hardlink,
             from: src.to_str().unwrap().to_owned(),
             to: s_dst.clone(),
         });

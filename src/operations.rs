@@ -214,7 +214,6 @@ impl FileOp {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    use anyhow::anyhow;
 
     #[test]
     #[should_panic]

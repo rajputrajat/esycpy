@@ -11,6 +11,8 @@ fn main() -> Result<()> {
     log_panics::init();
     let args = args::get_args();
     println!("{:#?}", args);
+    let file_op = operations::FileOp::from(args);
+    file_op.process()?;
     Ok(())
 }
 

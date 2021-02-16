@@ -139,7 +139,12 @@ impl FileOp {
         {
             let file = file.unwrap();
             let src = file.path();
-            let dst = FileOp::fix_offset(&self.p, src.to_str().unwrap());
+            let dst: String;
+            if only_cur_dir {
+                dst = Path::new(&self.p.to).join(file.file_name()).to_str().unwrap().to_owned();
+            } else {
+                dst = FileOp::fix_offset(&self.p, src.to_str().unwrap());
+            }
             paths.push(Paths {
                 from: src.to_str().unwrap().to_owned(),
                 to: dst,

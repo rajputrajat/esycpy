@@ -53,12 +53,10 @@ impl FileOp {
                 if file_name.contains('*') {
                     f_type = Some(FileType::Filter(file_name.to_owned()));
                     from = file_path.parent().unwrap().to_owned();
+                } else if file_path.is_dir() {
+                    f_type = Some(FileType::Dir);
                 } else {
-                    if file_path.is_dir() {
-                        f_type = Some(FileType::Dir);
-                    } else {
-                        f_type = Some(FileType::File);
-                    }
+                    f_type = Some(FileType::File);
                 }
                 Self {
                     op: Some(op),
@@ -74,7 +72,7 @@ impl FileOp {
     pub fn process(&self) -> Result<()> {
         trace!("processing {:?}", self);
         match &self.f_type {
-            Some(FileType::File) => self.file_op(&vec![self.p.clone()])?,
+            Some(FileType::File) => self.file_op(&[self.p.clone()])?,
             Some(FileType::Dir) => self.dir_to_dir()?,
             Some(FileType::Filter(file_name)) => {
                 let mut only_cur_dir = true;
@@ -83,15 +81,13 @@ impl FileOp {
                 }
                 let ext = FileOp::get_ext(file_name)?;
                 let filter = |f: &DirEntry| -> bool {
-                    if ext == "" {
-                        true
-                    } else if f.file_name().to_str().unwrap().contains(&ext) {
+                    if ext.is_empty() {
                         true
                     } else {
-                        false
+                        f.file_name().to_str().unwrap().contains(&ext)
                     }
                 };
-                let v_paths = self.get_src_dst_paths(filter, only_cur_dir, !ext.is_empty())?;
+                let v_paths = self.get_src_dst_paths(filter, only_cur_dir, !ext.is_empty());
                 self.file_op(&v_paths)?;
             }
             None => unreachable!(),
@@ -107,9 +103,9 @@ impl FileOp {
 
     fn dir_to_dir(&self) -> Result<()> {
         match self.op {
-            Some(Operation::Move) => self.file_op(&vec![self.p.clone()])?,
+            Some(Operation::Move) => self.file_op(&[self.p.clone()])?,
             Some(Operation::Hardlink) | Some(Operation::Copy_) => {
-                let v_paths = self.get_src_dst_paths(|f| f.path().is_file(), false, false)?;
+                let v_paths = self.get_src_dst_paths(|f| f.path().is_file(), false, false);
                 self.file_op(&v_paths)?;
             }
             None => unreachable!(),
@@ -127,7 +123,7 @@ impl FileOp {
         fname_filter: F,
         only_cur_dir: bool,
         ext_specified: bool,
-    ) -> Result<Vec<Paths>>
+    ) -> Vec<Paths>
     where
         F: Fn(&DirEntry) -> bool,
     {
@@ -156,10 +152,10 @@ impl FileOp {
         }
         trace!("{:#?}", paths);
         trace!("{:?}", paths);
-        Ok(paths)
+        paths
     }
 
-    fn file_op(&self, vp: &Vec<Paths>) -> Result<()> {
+    fn file_op(&self, vp: &[Paths]) -> Result<()> {
         for p in vp {
             trace!("{:?}", p);
             let src = Path::new(&p.from);
@@ -384,7 +380,7 @@ mod tests {
             to: s_dst.clone(),
         });
         trace!("{:?}", file_op);
-        let mut v_returned = file_op.get_src_dst_paths(|_| true, false, false).unwrap();
+        let mut v_returned = file_op.get_src_dst_paths(|_| true, false, false);
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
         let mut v_test: Vec<Paths> = vec![
@@ -422,22 +418,20 @@ mod tests {
             to: s_dst.clone(),
         });
         trace!("{:?}", file_op);
-        let mut v_returned = file_op
-            .get_src_dst_paths(
-                |f| {
-                    let ext = f
-                        .file_name()
-                        .to_str()
-                        .unwrap()
-                        .rsplit(|c| c == '.')
-                        .next()
-                        .unwrap();
-                    ext == "file"
-                },
-                true,
-                true,
-            )
-            .unwrap();
+        let mut v_returned = file_op.get_src_dst_paths(
+            |f| {
+                let ext = f
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .rsplit(|c| c == '.')
+                    .next()
+                    .unwrap();
+                ext == "file"
+            },
+            true,
+            true,
+        );
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
         let mut v_test: Vec<Paths> = vec![Paths {
@@ -461,22 +455,20 @@ mod tests {
             to: s_dst.clone(),
         });
         trace!("{:?}", file_op);
-        let mut v_returned = file_op
-            .get_src_dst_paths(
-                |f| {
-                    let ext = f
-                        .file_name()
-                        .to_str()
-                        .unwrap()
-                        .rsplit(|c| c == '.')
-                        .next()
-                        .unwrap();
-                    ext == "file"
-                },
-                false,
-                true,
-            )
-            .unwrap();
+        let mut v_returned = file_op.get_src_dst_paths(
+            |f| {
+                let ext = f
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .rsplit(|c| c == '.')
+                    .next()
+                    .unwrap();
+                ext == "file"
+            },
+            false,
+            true,
+        );
         fix_path_vec(&mut v_returned);
         v_returned.sort_unstable();
         let mut v_test: Vec<Paths> = vec![

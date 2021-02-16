@@ -10,7 +10,7 @@ pub fn get_json_args(args: ArgsType) -> Vec<ArgsType> {
             json_file,
             variables,
         } => {
-            let json_def = parse_json(Path::new(&json_file).as_ref());
+            let json_def = parse_json(Path::new(&json_file));
             map_variables(json_def, variables)
         }
         _ => unreachable!(),
@@ -23,7 +23,7 @@ fn map_variables(
 ) -> Vec<ArgsType> {
     assert_eq!(
         variables.is_none(),
-        asset_def.variables_in_use.len() == 0,
+        asset_def.variables_in_use.is_empty(),
         "either json file is missing vars, or command line"
     );
     if variables.is_some() {

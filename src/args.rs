@@ -79,7 +79,7 @@ pub fn get_args() -> ArgsType {
                 .requires("json_file")
                 .min_values(1)
                 .validator(|v| -> Result<(), String> {
-                    if v.contains("=") {
+                    if v.contains('=') {
                         Ok(())
                     } else {
                         Err(String::from("assignment operator not found. check help."))

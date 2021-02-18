@@ -165,6 +165,10 @@ impl FileOp {
             if !dst.parent().unwrap().exists() {
                 fs::create_dir_all(dst.parent().unwrap())?;
             }
+            if dst.is_file() {
+                trace!("remove file: {:#?}", dst);
+                fs::remove_file(dst)?;
+            }
             match self.op {
                 Some(Operation::Copy_) => {
                     let _ = fs::copy(&src, &dst)?;

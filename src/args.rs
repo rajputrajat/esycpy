@@ -113,8 +113,7 @@ pub fn get_args() -> ArgsType {
             Some("move") => ("move", Operation::Move),
             Some("hardlink") => ("hardlink", Operation::Hardlink),
             _ => {
-                let mut app = app;
-                app.print_long_help().unwrap();
+                eprintln!("no arguments given. run \"esycpy --help\" to learn it's usage");
                 std::process::exit(0);
             }
         };

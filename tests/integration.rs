@@ -9,7 +9,9 @@ use walkdir::WalkDir;
 fn test_run() -> Result<()> {
     let mut cmd = Command::cargo_bin("esycpy")?;
     let out = String::from_utf8(cmd.output()?.stdout)?;
-    assert!(out.contains("rajputrajat@gmail.com"));
+    let err = String::from_utf8(cmd.output()?.stderr)?;
+    assert!(err.contains("no arguments given"));
+    assert!(out.is_empty());
     Ok(())
 }
 

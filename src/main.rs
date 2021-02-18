@@ -45,7 +45,7 @@ fn setup_logger() -> Result<()> {
         WriteLogger::new(
             LevelFilter::Trace,
             Config::default(),
-            File::create("asset_maker.log")?,
+            File::create(".esycpy.log")?,
         ),
     ])?;
     Ok(())

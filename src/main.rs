@@ -17,6 +17,7 @@ fn main() -> Result<()> {
     setup_logger()?;
     log_panics::init();
     let args = get_args();
+    eprintln!("input: {:?}", args);
     trace!("{:#?}", args);
     match args {
         ArgsType::CmdLine {
@@ -55,5 +56,5 @@ fn setup_logger() -> Result<()> {
 
 fn print_git_version() {
     const GIT_VERSION: &str = git_version!();
-    eprintln!("version: {}", GIT_VERSION);
+    eprintln!("Running esycpy, version: {}", GIT_VERSION);
 }

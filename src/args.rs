@@ -35,7 +35,6 @@ pub fn get_args() -> ArgsType {
         .value_name("destination_path")
         .required(true);
     let app = App::new("EsyCpy")
-        .version("0.1.0")
         .author("Rajat Rajput <rajputrajat@gmail.com")
         .about("copy, move files and create hardlinks with ease.")
         .help(HELP)
@@ -132,7 +131,7 @@ pub fn get_args() -> ArgsType {
 }
 
 const HELP: &str = r#"
-EsyCpy 0.1.0
+EsyCpy
 Rajat Rajput <rajputrajat@gmail.com>
 copy, move and create hardlinks of files/dirs with ease
 

@@ -5,8 +5,7 @@
         "{ProjectName}",
         "{ProjectDir}",
         "{SolutionDir}",
-        "{OutDir}",
-        "{MonacoBinDir}"
+        "{OutDir}"
     ],
     "jobs": [
         {

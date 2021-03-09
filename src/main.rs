@@ -13,11 +13,11 @@ use json_parser::get_json_args;
 use operations::FileOp;
 
 fn main() -> Result<()> {
+    print_git_version();
     setup_logger()?;
     log_panics::init();
     let args = get_args();
     trace!("{:#?}", args);
-    print_git_version();
     match args {
         ArgsType::CmdLine {
             op: _,

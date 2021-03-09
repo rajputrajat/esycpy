@@ -1,4 +1,5 @@
 use anyhow::Result;
+use git_version::git_version;
 use log::trace;
 use simplelog::*;
 use std::fs::File;
@@ -16,6 +17,7 @@ fn main() -> Result<()> {
     log_panics::init();
     let args = get_args();
     trace!("{:#?}", args);
+    print_git_version();
     match args {
         ArgsType::CmdLine {
             op: _,
@@ -49,4 +51,9 @@ fn setup_logger() -> Result<()> {
         ),
     ])?;
     Ok(())
+}
+
+fn print_git_version() {
+    const GIT_VERSION: &str = git_version!();
+    eprintln!("version: {}", GIT_VERSION);
 }

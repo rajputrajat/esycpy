@@ -13,6 +13,7 @@ This still require much work and possibly restructuring.
 Output from > esycpy --help
 
 ---
+```
 
 USAGE:
     esycpy [SUBCOMMAND]
@@ -94,3 +95,4 @@ EXAMPLES:
         > esycpy move -s c:/users/example/dir2/*.xml -d c:/users/example/dir_move_in_here
     4. Copy all ogg files recursively to destination dir
         > esycpy copy /home/example/audios/**.ogg /home/example/only_oggs
+```
